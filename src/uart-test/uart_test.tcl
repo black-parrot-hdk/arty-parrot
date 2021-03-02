@@ -37,7 +37,7 @@
 #*****************************************************************************************
 
 # Set the reference directory for source file relative paths (by default the value is script directory path)
-set origin_dir ".."
+set origin_dir "."
 
 # Use origin directory path location variable, if specified in the tcl shell
 if { [info exists ::origin_dir_loc] } {
@@ -176,10 +176,11 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 
 # Set 'constrs_1' fileset object
 set obj [get_filesets constrs_1]
+set files [list \
+ [file normalize "${origin_dir}/xdc/constraints.xdc" ]\
+]
+add_files -norecurse -fileset $obj $files
 
-# Add/Import constrs file and set constrs file properties
-set file "[file normalize "$origin_dir/xdc/constraints.xdc"]"
-set file_added [import_files -fileset constrs_1 [list $file]]
 set file "$origin_dir/xdc/constraints.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
