@@ -21,14 +21,14 @@
 # 1. This project restoration tcl script (uart_test.tcl) that was generated.
 #
 # 2. The following source(s) files that were local or imported into the original project.
-#    (Please see the '$orig_proj_dir' and '$origin_dir' variable setting below at the start of the script)
+#    (Please see the '$origin_dir' variable setting below at the start of the script)
 #
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_defs.vh"
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_rx.sv"
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_tx.sv"
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/system.sv"
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/constrs_1/new/constraints.xdc"
-#    "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sim_1/new/testbench.sv"
+#    include/uart_defs.vh"
+#    src/uart_rx.sv"
+#    src/uart_tx.sv"
+#    src/system.sv"
+#    xdc/constraints.xdc"
+#    sim/testbench.sv"
 #
 # 3. The following remote source files that were added to the original project:-
 #
@@ -36,28 +36,8 @@
 #
 #*****************************************************************************************
 
-# Check file required for this script exists
-proc checkRequiredFiles { origin_dir} {
-  set status true
-  set files [list \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_defs.vh" \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_rx.sv" \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_tx.sv" \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/system.sv" \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/constrs_1/new/constraints.xdc" \
-   "C:/Users/muwys/Downloads/arty-a7-100t/uart-test/uart-test.srcs/sim_1/new/testbench.sv" \
-  ]
-  foreach ifile $files {
-    if { ![file isfile $ifile] } {
-      puts " Could not find local file $ifile "
-      set status false
-    }
-  }
-
-  return $status
-}
 # Set the reference directory for source file relative paths (by default the value is script directory path)
-set origin_dir "."
+set origin_dir ".."
 
 # Use origin directory path location variable, if specified in the tcl shell
 if { [info exists ::origin_dir_loc] } {
@@ -120,20 +100,6 @@ if { $::argc > 0 } {
   }
 }
 
-# Set the directory path for the original project from where this script was exported
-set orig_proj_dir "[file normalize "$origin_dir/../../../../Downloads/arty-a7-100t/uart-test"]"
-
-# Check for paths and files needed for project creation
-set validate_required 0
-if { $validate_required } {
-  if { [checkRequiredFiles $origin_dir] } {
-    puts "Tcl file $script_file is valid. All files required for project creation is accesable. "
-  } else {
-    puts "Tcl file $script_file is not valid. Not all files required for project creation is accesable. "
-    return
-  }
-}
-
 # Create project
 create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1
 
@@ -143,7 +109,6 @@ set proj_dir [get_property directory [current_project]]
 # Set project properties
 set obj [current_project]
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
-set_property -name "enable_vhdl_2008" -value "1" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
 set_property -name "ip_output_repo" -value "$proj_dir/${_xil_proj_name_}.cache/ip" -objects $obj
 set_property -name "mem.enable_memory_map_generation" -value "1" -objects $obj
@@ -168,32 +133,33 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
-# Import local files from the original project
 set files [list \
- [file normalize "${origin_dir}/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_defs.vh" ]\
- [file normalize "${origin_dir}/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_rx.sv" ]\
- [file normalize "${origin_dir}/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/uart_tx.sv" ]\
- [file normalize "${origin_dir}/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/sources_1/new/system.sv" ]\
+ [file normalize "${origin_dir}/include/uart_defs.vh" ]\
+ [file normalize "${origin_dir}/src/uart_rx.sv" ]\
+ [file normalize "${origin_dir}/src/uart_tx.sv" ]\
+ [file normalize "${origin_dir}/src/system.sv" ]\
 ]
-set imported_files [import_files -fileset sources_1 $files]
-
-# Set 'sources_1' fileset file properties for remote files
-# None
+add_files -norecurse -fileset $obj $files
 
 # Set 'sources_1' fileset file properties for local files
-set file "new/uart_defs.vh"
+set file "$origin_dir/include/uart_defs.vh"
+set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "Verilog Header" -objects $file_obj
+set_property -name "is_global_include" -value "1" -objects $file_obj
 
-set file "new/uart_rx.sv"
+set file "$origin_dir/src/uart_rx.sv"
+set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 
-set file "new/uart_tx.sv"
+set file "$origin_dir/src/uart_tx.sv"
+set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 
-set file "new/system.sv"
+set file "$origin_dir/src/system.sv"
+set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 
@@ -201,6 +167,7 @@ set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
 set_property -name "top" -value "system" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -211,9 +178,10 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize "$origin_dir/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/constrs_1/new/constraints.xdc"]"
-set file_imported [import_files -fileset constrs_1 [list $file]]
-set file "new/constraints.xdc"
+set file "[file normalize "$origin_dir/xdc/constraints.xdc"]"
+set file_added [import_files -fileset constrs_1 [list $file]]
+set file "$origin_dir/xdc/constraints.xdc"
+set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
 
@@ -230,15 +198,15 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 set obj [get_filesets sim_1]
 # Import local files from the original project
 set files [list \
- [file normalize "${origin_dir}/../../../../Downloads/arty-a7-100t/uart-test/uart-test.srcs/sim_1/new/testbench.sv" ]\
+ [file normalize "${origin_dir}/sim/testbench.sv" ]\
 ]
-set imported_files [import_files -fileset sim_1 $files]
+add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset file properties for remote files
 # None
 
 # Set 'sim_1' fileset file properties for local files
-set file "new/testbench.sv"
+set file "sim/testbench.sv"
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 
