@@ -2,6 +2,7 @@ import os
 import sys
 import serial
 import argparse
+import atexit
 
 parser = argparse.ArgumentParser(description='UART Driver')
 parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4',
@@ -22,6 +23,9 @@ parser.add_argument('-f', '--file', dest='infile', default=None, type=str,
 parser.add_argument('-m', '--mode', dest='mode', default='binary', const='hex',
                     nargs='?', choices=['binary', 'hex', 'input-ch', 'input-hex'],
                     help='Input file mode [binary, hex, input-ch, input-hex]. input- modes read from stdin')
+
+# serial port
+sp = None
 
 def getArgs():
   return parser.parse_args()
@@ -64,8 +68,20 @@ def encodeString(string):
 def hexStringToBytes(string):
   return bytes.fromhex(string)
 
+def exit_handler():
+  if sp:
+    sp.close()
+
 if __name__ == '__main__':
+  atexit.register(exit_handler)
+  args = getArgs()
+  sp = openSerial(args)
+  user_input = None
   while (True):
     print('Enter characters to send:')
-    user_input = input('$ ')
-    print('{0}'.format(encodeString(user_input)))
+    user_input = encodeString(input('$ '))
+    user_input_length = len(user_input)
+    sp.write(user_input)
+    print('sent {0} bytes'.format(user_input_length))
+    print('readback: {0}'.format(sp.read(user_input_length)))
+
