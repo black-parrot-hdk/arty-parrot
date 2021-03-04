@@ -2,6 +2,7 @@ import os
 import sys
 import serial
 import argparse
+import signal
 import atexit
 
 parser = argparse.ArgumentParser(description='UART Driver')
@@ -9,10 +10,10 @@ parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4',
                     help='Serial port (full path)')
 parser.add_argument('-b', '--baud', dest='baud', type=int, default=9600,
                     help='Baud Rate (bits per second)')
-parser.add_argument('-d', '--data-bits', dest='bits', default=8, const=8,
+parser.add_argument('-d', '--data-bits', dest='bits', default=8, const=8, type=int,
                     nargs='?', choices=[5, 6, 7, 8],
                     help='Data bits [5, 6, 7, 8]')
-parser.add_argument('-s', '--stop-bits', dest='stopbits', default=1, const=1,
+parser.add_argument('-s', '--stop-bits', dest='stopbits', default=1, const=1, type=int,
                     nargs='?', choices=[1, 2],
                     help='Stop bits [1, 2]')
 parser.add_argument('--parity', dest='parity', default='none', const='none',
@@ -20,7 +21,7 @@ parser.add_argument('--parity', dest='parity', default='none', const='none',
                     help='Parity [none, even, odd]')
 parser.add_argument('-f', '--file', dest='infile', default=None, type=str,
                     help='Input file')
-parser.add_argument('-m', '--mode', dest='mode', default='binary', const='hex',
+parser.add_argument('-m', '--mode', dest='mode', default='input-ch', const='input-ch',
                     nargs='?', choices=['binary', 'hex', 'input-ch', 'input-hex'],
                     help='Input file mode [binary, hex, input-ch, input-hex]. input- modes read from stdin')
 
@@ -32,10 +33,7 @@ def getArgs():
 
 def openFile(infile, mode):
   fp = os.path.abspath(os.path.realpath(infile))
-  m = 'r'
-  if (mode == 'binary'):
-    m = 'rb'
-  return open(fp, m)
+  return open(fp, mode)
 
 def openSerial(args):
   bytesize = serial.EIGHTBITS
@@ -66,16 +64,47 @@ def encodeString(string):
   return string.encode('utf-8')
 
 def hexStringToBytes(string):
-  return bytes.fromhex(string)
+  try:
+    b = bytes.fromhex(string)
+  except:
+    print('could not parse as hex: {0}'.format(string))
+    b = None
+  return b
 
-def exit_handler():
-  if sp:
+# Exit and Signal handlers
+def exitHandler():
+  print("goodbye!")
+  if sp.is_open:
+    print("closing serial port: {0}".format(sp.name))
     sp.close()
 
-if __name__ == '__main__':
-  atexit.register(exit_handler)
-  args = getArgs()
-  sp = openSerial(args)
+def signalHandler(sig, frame):
+  print("signal handler")
+  if sp.is_open:
+    print("closing serial port: {0}".format(sp.name))
+    sp.close()
+  sys.exit(1)
+
+
+# modes
+def runBinary(args):
+    pass
+
+def runHex(args):
+    pass
+
+def interactiveHex(args):
+  user_input = None
+  while (True):
+    print('Enter hex characters to send:')
+    user_input = hexStringToBytes(input('$ '))
+    if not user_input is None:
+      user_input_length = len(user_input)
+      sp.write(user_input)
+      print('sent {0} bytes'.format(user_input_length))
+      print('readback: {0}'.format(sp.read(user_input_length)))
+
+def interactiveCh(args):
   user_input = None
   while (True):
     print('Enter characters to send:')
@@ -85,3 +114,23 @@ if __name__ == '__main__':
     print('sent {0} bytes'.format(user_input_length))
     print('readback: {0}'.format(sp.read(user_input_length)))
 
+if __name__ == '__main__':
+  atexit.register(exitHandler)
+  signal.signal(signal.SIGINT, signalHandler)
+  args = getArgs()
+  try:
+    sp = openSerial(args)
+    if args.mode == 'input-ch':
+      interactiveCh(args)
+    elif args.mode == 'input-hex':
+      interactiveHex(args)
+    elif args.mode == 'binary':
+      f = openFile(args.infile, 'rb')
+      f.close()
+      pass
+    elif args.mode == 'hex':
+      f = openFile(args.infile, 'r')
+      f.close()
+      pass
+  except:
+    print("caught an exception, closing")
