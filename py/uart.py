@@ -22,8 +22,10 @@ parser.add_argument('--parity', dest='parity', default='none', const='none',
 parser.add_argument('-f', '--file', dest='infile', default=None, type=str,
                     help='Input file')
 parser.add_argument('-m', '--mode', dest='mode', default='input-ch', const='input-ch',
-                    nargs='?', choices=['binary', 'hex', 'input-ch', 'input-hex'],
-                    help='Input file mode [binary, hex, input-ch, input-hex]. input- modes read from stdin')
+                    nargs='?', choices=['binary', 'hex', 'nbf', 'input-ch', 'input-hex'],
+                    help='Input file mode [binary, hex, nbf, input-ch, input-hex]. input- modes read from stdin')
+parser.add_argument('-n', '--nbf-bits', dest='nbf', default=112, type=int,
+                    help='Number of bits per NBF command (opcode + address + data)')
 
 # serial port
 sp = None
@@ -88,10 +90,28 @@ def signalHandler(sig, frame):
 
 # modes
 def runBinary(args):
-    pass
+  pass
 
 def runHex(args):
-    pass
+  pass
+
+def sendNBF(args):
+  # process input file as BlackParrot NBF format
+  # each line of nbf file is hex characters
+  # underscores may be present to separate hex
+  try:
+    bytes_written = 0
+    with openFile(args.infile, 'r') as f:
+      for line in f:
+        line = line.strip().replace('_','')
+        line_bytes = hexStringToBytes(line)
+        sp.write(line_bytes)
+        bytes_written += len(line_bytes)
+    print('wrote {0} bytes from nbf'.format(bytes_written))
+  except:
+    print('failed to transfer nbf file')
+    if not sp is None and sp.is_open:
+      sp.close()
 
 def interactiveHex(args):
   user_input = None
@@ -132,5 +152,7 @@ if __name__ == '__main__':
       f = openFile(args.infile, 'r')
       f.close()
       pass
+    elif args.mode == 'nbf':
+      runNBF(args)
   except:
     print("caught an exception, closing")
