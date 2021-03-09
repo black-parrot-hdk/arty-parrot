@@ -4,10 +4,13 @@
  *   bp_fpga_host.sv
  *
  * Description:
- *   FPGA Host module for BlackParrot with AXI to memory and UART to PC
+ *   FPGA Host module for BlackParrot. This host consumes NBF packets sent over UART
+ *   from PC Host and forwards them to BP on io_cmd_o/io_resp_i. This host can also
+ *   receive minimal IO commands from BP on io_cmd_i/io_resp_o that are then forwarded
+ *   to the PC Host as NBF commands over UART.
  */
 
- module bp_fpga_host
+module bp_fpga_host
   import bp_common_pkg::*;
   import bp_me_pkg::*;
   import bp_fpga_host_pkg::*;
@@ -47,7 +50,7 @@
    , input                                   io_resp_v_i
    , output logic                            io_resp_ready_and_o
 
-   // UART to PC Host
+   // UART from/to PC Host
    , input                                   rx_i
    , output logic                            tx_o
 
@@ -60,8 +63,10 @@
      else $error("NBF data width must be 64-bits");
    assert(uart_data_bits_p == 8)
      else $error("UART must use 8 data bits");
-   assert(uart_parity_bit_p == 0)
-     else $error("UART does not yet support parity.");
+   assert(uart_parity_bit_p == 0 || uart_parity_bit_p == 1)
+     else $error("UART parity_bit_p must be 0 (none) or 1");
+   assert(uart_parity_odd_p == 0 || uart_parity_odd_p == 1)
+     else $error("UART parity_odd_p must be 0 (even) or 1 (odd)");
    assert(uart_stop_bits_p == 1 || uart_stop_bits_p == 2)
      else $error("Invalid UART stop bits setting. Must be 1 or 2.");
   end

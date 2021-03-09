@@ -5,8 +5,6 @@
  *
  * TODO:
  * - report frame error if detected
- * - support odd parity
- * - fix parity
  */
 
 `include "bp_common_defines.svh"
@@ -40,6 +38,7 @@ module uart_rx
     
     logic [`BSG_SAFE_CLOG2(clk_per_bit_p+1)-1:0] clk_cnt_r, clk_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] data_cnt_r, data_cnt_n;
+    logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] parity_cnt_r, parity_cnt_n;
     
     logic data_in_r, data_in_n;
     logic data_r, data_n;
@@ -50,7 +49,6 @@ module uart_rx
     
     logic [data_bits_p-1:0] rx_data_r, rx_data_n;
     logic rx_v_r, rx_v_n;
-    logic parity_r, parity_n;
     
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
@@ -61,7 +59,7 @@ module uart_rx
             data_r <= '0;
             rx_data_r <= '0;
             rx_v_r <= '0;
-            parity_r <= '0;
+            parity_cnt_r <= '0;
         end else begin
             rx_state_r <= rx_state_n;
             clk_cnt_r <= clk_cnt_n;
@@ -70,7 +68,7 @@ module uart_rx
             data_r <= data_n;
             rx_data_r <= rx_data_n;
             rx_v_r <= rx_v_n;
-            parity_r <= parity_n;
+            parity_cnt_r <= parity_cnt_n;
         end
     end
     
@@ -87,7 +85,7 @@ module uart_rx
         // rx_i -> data_in_r -> data_r
         data_in_n = rx_i;
         data_n = data_in_r;
-        parity_n = parity_r;
+        parity_cnt_n = parity_cnt_r;
         
         // rx valid and data registers
         rx_v_n = rx_v_r;
@@ -106,7 +104,7 @@ module uart_rx
                 data_cnt_n = '0;
                 rx_v_n = '0;
                 rx_data_n = '0;
-                parity_n = '0;
+                parity_cnt_n = '0;
                 // on start bit detected, begin transaction
                 rx_state_n = rx_start ? e_start_bit : e_idle;
             end
@@ -128,7 +126,9 @@ module uart_rx
                 if (clk_cnt_r == (clk_per_bit_p - 'd1)) begin
                     clk_cnt_n = '0;
                     rx_data_n[data_cnt_r] = data_r;
-                    parity_n = parity_r ^ data_r;
+                    if (parity_bit_p == 1) begin
+                        parity_cnt_n = parity_cnt_r + data_r;
+                    end
                     if (data_cnt_r < (data_bits_p-1)) begin
                         data_cnt_n = data_cnt_r + 'd1;
                     end else begin
@@ -144,7 +144,15 @@ module uart_rx
                     clk_cnt_n = '0;
                     rx_state_n = e_stop_bit;
                     // raise error if captured parity bit does not match received parity
-                    rx_error_o = (parity_r != data_r);
+                    if (parity_odd_p == 1) begin
+                      // odd parity -> parity bit set when count of ones in data
+                      // bits is even (== 0), to make data + parity odd (== 1)
+                      rx_error_o = (~parity_cnt_r[0] & data_r);
+                    end else begin
+                      // even parity -> parity bit set when count of ones in data
+                      // bits is odd (== 1), to make data + parity even (== 0)
+                      rx_error_o = (parity_cnt_r[0] & data_r);
+                    end
                 end else begin
                     clk_cnt_n = clk_cnt_r + 'd1;
                 end
@@ -172,7 +180,7 @@ module uart_rx
             e_finish: begin
                 rx_state_n = e_idle;
                 rx_v_n = '0;
-                parity_n = '0;
+                parity_cnt_n = '0;
             end
             default: begin
                 rx_state_n = e_reset; 

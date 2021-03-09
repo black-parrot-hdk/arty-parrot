@@ -3,9 +3,6 @@
  * UART message = 1 start bit, 5-9 data bits, [1 parity bit], 1 or 2 stop bits
  * start bit is low, stop bit is high
  *
- * TODO:
- * - support odd parity
- * - fix parity
  */
 
 `include "bp_common_defines.svh"
@@ -41,13 +38,13 @@ module uart_tx
     
     logic [`BSG_SAFE_CLOG2(clk_per_bit_p+1)-1:0] clk_cnt_r, clk_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] data_cnt_r, data_cnt_n;
+    logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] parity_cnt_r, parity_cnt_n;
     
     // transmit LSB->MSB
     logic [data_bits_p-1:0] tx_data_r, tx_data_n;
     logic tx_r, tx_n;
     logic tx_v_r, tx_v_n;
     logic tx_done_r, tx_done_n;
-    logic parity_r, parity_n;
     
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
@@ -59,7 +56,7 @@ module uart_tx
             tx_r <= 1'b1;
             tx_v_r <= '0;
             tx_done_r <= '0;
-            parity_r <= '0;
+            parity_cnt_r <= '0;
         end else begin
             tx_state_r <= tx_state_n;
             clk_cnt_r <= clk_cnt_n;
@@ -68,7 +65,7 @@ module uart_tx
             tx_r <= tx_n;
             tx_v_r <= tx_v_n;
             tx_done_r <= tx_done_n;
-            parity_r <= parity_n;
+            parity_cnt_r <= parity_cnt_n;
         end
     end
     
@@ -80,7 +77,7 @@ module uart_tx
         tx_n = tx_r;
         tx_v_n = tx_v_r;
         tx_done_n = tx_done_r;
-        parity_n = parity_r;
+        parity_cnt_n = parity_cnt_r;
         
         // outputs
         tx_yumi_o = '0;
@@ -103,7 +100,7 @@ module uart_tx
                 tx_done_n = '0;
                 clk_cnt_n = '0;
                 data_cnt_n = '0;
-                parity_n = '0;
+                parity_cnt_n = '0;
                 // valid input raised, capture data
                 // next cycle starts sending start bit
                 if (tx_v_i == 1'b1) begin
@@ -137,8 +134,9 @@ module uart_tx
                 end else begin
                     // current bit done, reset clock counter
                     clk_cnt_n = '0;
-                    // capture bit into parity
-                    parity_n = parity_r ^ tx_data_r[data_cnt_r];
+                    if (parity_bit_p == 1) begin
+                        parity_cnt_n = parity_cnt_r + data_r;
+                    end
                     // more bits to send, stay in state, increment bit count
                     if (data_cnt_r < (data_bits_p-1)) begin
                         data_cnt_n = data_cnt_r + 'd1;
@@ -148,8 +146,15 @@ module uart_tx
                         data_cnt_n = '0;
                         if (parity_bit_p == 1) begin
                             tx_state_n = e_parity_bit;
-                            // parity bit will have value of parity_n
-                            tx_n = parity_n;
+                            if (parity_odd_p == 1) begin
+                              // odd parity -> parity bit set when count of ones in data
+                              // bits is even (== 0), to make data + parity odd (== 1)
+                              tx_n = ~parity_cnt_n[0];
+                            end else begin
+                              // even parity -> parity bit set when count of ones in data
+                              // bits is odd (== 1), to make data + parity even (== 0)
+                              tx_n = parity_cnt_n[0];
+                            end
                         end else begin
                             // stop bits are high
                             tx_state_n = e_stop_bit;
@@ -160,14 +165,22 @@ module uart_tx
             end
             // sending parity bit
             e_parity_bit: begin
-                tx_n = parity_r;
+                if (parity_odd_p == 1) begin
+                  // odd parity -> parity bit set when count of ones in data
+                  // bits is even (== 0), to make data + parity odd (== 1)
+                  tx_n = ~parity_cnt_r[0];
+                end else begin
+                  // even parity -> parity bit set when count of ones in data
+                  // bits is odd (== 1), to make data + parity even (== 0)
+                  tx_n = parity_cnt_r[0];
+                end
                 if (clk_cnt_r < (clk_per_bit_p - 1)) begin
                     clk_cnt_n = clk_cnt_r + 'd1;
                 // done sending parity bit, move to stop bits
                 end else begin
                     clk_cnt_n = '0;
                     // reset parity bit
-                    parity_n = 1'b0;
+                    parity_cnt_n = 1'b0;
                     // send stop bit; stop bit is high
                     tx_state_n = e_stop_bit;
                     tx_n = 1'b1;
