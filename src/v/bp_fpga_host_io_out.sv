@@ -6,18 +6,42 @@
  * Description:
  *   FPGA Host IO Output module with UART Tx to PC Host and io_cmd/resp from BP
  *
+ * Inputs:
+ *   io_cmd_i - IO requests from BlackParrotA
+ *            - includes core done, put char (global or core specific), error (TBD)
+ *            - lowest priority, can block
+ *
+ *   nbf_i - NBF responses from bp_fpga_host_io_in.sv
+ *         - includes nbf finish, nbf fence done, UART RX error, memory read response
+ *         - highest priority (cannot block UART RX in bp_fpga_host_io_in)
+ *
+ * Outputs:
+ *   io_resp_o - response to io_cmd_i messages
+ *             - respond with ack to BP as soon as cmd is processed
+ *
+ *
  * TODO:
- * - add packet buffer on input of UART Tx
- * - FSM to process IO commands
- * -- converts IO command to NBF packet out
- * -- process io_cmd_i
- * --- most commands send NBF across UART Tx
- * -- generate io_resp_o
- * - data PISO to produce UART data packets
- * -- 8 packets, 8-bits each to one 64-bit data word
- * - address PISO to produce UART address packets
- * -- 40-bit address = 5 packets, 8-bits each
- * - process NBF packets from bp_fpga_host_io_in and send on UART
+ * NBF buffer (bsg_two_fifo)
+ * - inputs from FSM and nbf_i arbitration
+ * - fixed priority to nbf_i buffer
+ *
+ * nbf_i buffer (bsg_two_fifo)
+ * - buffer NBF packets from bp_fpga_host_io_in
+ *
+ * PISO (bsg_parallel_in_serial_out_passthrough)
+ * - converts NBF buffer packets to UART TX
+ * - opcode + addr + data = 1 + 5 + 8 bytes = 14 bytes on input
+ * - 1 byte on output
+ * - send over UART TX should be opcode then address then data
+ * - address and data should send LSB to MSB (or MSB to LSB?)
+ *
+ * FSM to process io_cmd_i
+ * - converts IO command to NBF packet
+ * - generate io_resp_o
+ *
+ * Arbitration from FSM and nbf_i buffer (bsg_arb_fixed)
+ * - fixed priority to nbf_i buffer
+ * - FSM is allowed to block on processing io_cmd_i
  */
 
 module bp_fpga_host_io_out
@@ -54,11 +78,9 @@ module bp_fpga_host_io_out
    , output logic                            tx_o
 
    // Signals from FPGA Host IO In
-   , input                                   fence_done_i
-   , input                                   rx_error_i
    , input [nbf_width_lp-1:0]                nbf_i
    , input                                   nbf_v_i
-   , output logic                            nbf_yumi_o
+   , output logic                            nbf_ready_and_o
    );
 
   wire tx_v_li, tx_yumi_lo, tx_v_lo, tx_done_lo;
