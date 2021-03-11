@@ -21,9 +21,14 @@
  *
  */
 
+`include "bp_common_defines.svh"
+`include "bp_me_defines.svh"
+`include "bp_fpga_host_defines.svh"
+
 module bp_fpga_host_io_out
   import bp_common_pkg::*;
   import bp_me_pkg::*;
+  import bp_fpga_host_pkg::*;
 
   #(parameter bp_params_e bp_params_p = e_bp_default_cfg
     `declare_bp_proc_params(bp_params_p)
@@ -38,11 +43,17 @@ module bp_fpga_host_io_out
     , parameter uart_stop_bits_p = 1 // 1 or 2
 
     , parameter nbf_buffer_els_p = 4
+    
+    , localparam nbf_uart_packets_lp = (nbf_width_lp / uart_data_bits_p)
 
-    , localparam byte_offset_width_lp = 3;
-    , localparam lg_num_core_lp = `BSG_SAFE_CLOG2(num_core_p);
+    , localparam byte_offset_width_lp = 3
+    , localparam lg_num_core_lp = `BSG_SAFE_CLOG2(num_core_p)
 
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    
+    , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
+    , localparam finish_base_addr_gp  = paddr_width_p'(64'h0010_2???)
+    , localparam putchar_core_base_addr_gp  = paddr_width_p'(64'h0010_3???)
     )
   (input                                     clk_i
    , input                                   reset_i
@@ -214,10 +225,6 @@ module bp_fpga_host_io_out
     end
   end
 
-  localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000);
-  localparam finish_base_addr_gp  = paddr_width_p'(64'h0010_2???);
-  localparam putch_core_base_addr_gp  = paddr_width_p'(64'h0010_3???);
-
   always_comb begin
     // outputs
     io_resp = '0;
@@ -229,7 +236,7 @@ module bp_fpga_host_io_out
     state_n = state_r;
     io_nbf_n = io_nbf_r;
 
-    unique case ()
+    unique case (state_r)
       e_reset: begin
         state_n = e_ready;
         io_nbf_n = '0;
@@ -244,12 +251,12 @@ module bp_fpga_host_io_out
           end
           putchar_core_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_putch;
-            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp];
+            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp]};
             io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
           end
           finish_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_core_done;
-            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp];
+            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp]};
             io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
           end
           default: begin end

@@ -9,6 +9,10 @@
  *   receive minimal IO commands from BP on io_cmd_i/io_resp_o that are then forwarded
  *   to the PC Host as NBF commands over UART.
  */
+ 
+`include "bp_common_defines.svh"
+`include "bp_me_defines.svh"
+`include "bp_fpga_host_defines.svh"
 
 module bp_fpga_host
   import bp_common_pkg::*;
@@ -20,6 +24,7 @@ module bp_fpga_host
 
     , parameter nbf_addr_width_p = paddr_width_p
     , parameter nbf_data_width_p = dword_width_gp
+    , localparam nbf_width_lp = `bp_fpga_host_nbf_width(nbf_addr_width_p, nbf_data_width_p)
 
     , parameter uart_clk_per_bit_p = 10416 // 100 MHz clock / 9600 Baud
     , parameter uart_data_bits_p = 8 // between 5 and 9 bits

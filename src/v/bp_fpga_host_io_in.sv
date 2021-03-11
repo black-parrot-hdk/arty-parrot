@@ -34,9 +34,14 @@
  *
  */
 
+`include "bp_common_defines.svh"
+`include "bp_me_defines.svh"
+`include "bp_fpga_host_defines.svh"
+
 module bp_fpga_host_io_in
   import bp_common_pkg::*;
   import bp_me_pkg::*;
+  import bp_fpga_host_pkg::*;
 
   #(parameter bp_params_e bp_params_p = e_bp_default_cfg
     `declare_bp_proc_params(bp_params_p)
@@ -86,6 +91,7 @@ module bp_fpga_host_io_in
 
   bp_bedrock_io_mem_msg_s io_cmd, io_resp;
   assign io_cmd_o = io_cmd;
+  bp_bedrock_io_mem_msg_payload_s io_cmd_payload;
 
   logic io_resp_v_lo, io_resp_yumi_li;
   // IO response buffer
