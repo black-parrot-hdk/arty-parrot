@@ -136,7 +136,7 @@ module uart_tx
                     // current bit done, reset clock counter
                     clk_cnt_n = '0;
                     if (parity_bit_p == 1) begin
-                        parity_cnt_n = parity_cnt_r + data_r;
+                        parity_cnt_n = parity_cnt_r + tx_data_r;
                     end
                     // more bits to send, stay in state, increment bit count
                     if (data_cnt_r < (data_bits_p-1)) begin
