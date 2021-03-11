@@ -1,6 +1,13 @@
 `ifndef BP_FPGA_HOST_DEFINES_SVH
 `define BP_FPGA_HOST_DEFINES_SVH
 
+  /*
+   * FPGA Host NBF Packet
+   *
+   * When sending over UART, bytes are transmitted LSB to MSB
+   * - opcode, then addr (LSB to MSB), then data (LSB to MSB)
+   *
+   */
   `define declare_bp_fpga_host_nbf_s(addr_width_mp, data_width_mp) \
     typedef struct packed                                          \
     {                                                              \

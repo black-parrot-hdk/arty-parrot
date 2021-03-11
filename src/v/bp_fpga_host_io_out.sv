@@ -19,29 +19,6 @@
  *   io_resp_o - response to io_cmd_i messages
  *             - respond with ack to BP as soon as cmd is processed
  *
- *
- * TODO:
- * NBF buffer (bsg_two_fifo)
- * - inputs from FSM and nbf_i arbitration
- * - fixed priority to nbf_i buffer
- *
- * nbf_i buffer (bsg_two_fifo)
- * - buffer NBF packets from bp_fpga_host_io_in
- *
- * PISO (bsg_parallel_in_serial_out_passthrough)
- * - converts NBF buffer packets to UART TX
- * - opcode + addr + data = 1 + 5 + 8 bytes = 14 bytes on input
- * - 1 byte on output
- * - send over UART TX should be opcode then address then data
- * - address and data should send LSB to MSB (or MSB to LSB?)
- *
- * FSM to process io_cmd_i
- * - converts IO command to NBF packet
- * - generate io_resp_o
- *
- * Arbitration from FSM and nbf_i buffer (bsg_arb_fixed)
- * - fixed priority to nbf_i buffer
- * - FSM is allowed to block on processing io_cmd_i
  */
 
 module bp_fpga_host_io_out
@@ -61,6 +38,9 @@ module bp_fpga_host_io_out
     , parameter uart_stop_bits_p = 1 // 1 or 2
 
     , parameter nbf_buffer_els_p = 4
+
+    , localparam byte_offset_width_lp = 3;
+    , localparam lg_num_core_lp = `BSG_SAFE_CLOG2(num_core_p);
 
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
     )
@@ -85,7 +65,30 @@ module bp_fpga_host_io_out
    , output logic                            nbf_ready_and_o
    );
 
+  `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
+
+  bp_bedrock_io_mem_msg_s io_cmd;
+  logic io_cmd_v, io_cmd_yumi;
+
+  bp_bedrock_io_mem_msg_s io_resp;
+  assign io_resp_o = io_resp;
+
+  // IO command buffer
+  bsg_two_fifo
+   #(.width_p($bits(bp_bedrock_io_mem_msg_s)))
+    io_cmd_fifo
+     (.clk_i(clk_i)
+      ,.reset_i(reset_i)
+      // from input
+      ,.v_i(io_cmd_v_i)
+      ,.ready_o(io_cmd_ready_and_o)
+      ,.data_i(io_cmd_i)
+      // to FSM
+      ,.v_o(io_cmd_v)
+      ,.yumi_i(io_cmd_yumi)
+      ,.data_o(io_cmd)
+      );
 
   bp_fpga_host_nbf_s nbf_li;
   logic nbf_v, nbf_yumi;
@@ -107,7 +110,7 @@ module bp_fpga_host_io_out
       );
 
   // nbf packet from FSM processing io_cmd_i
-  bp_fpga_host_nbf_s io_nbf;
+  bp_fpga_host_nbf_s io_nbf_r, io_nbf_n;
   logic io_nbf_v, io_nbf_yumi;
 
   // UART TX signals
@@ -126,13 +129,11 @@ module bp_fpga_host_io_out
   logic nbf_buffer_v_li, nbf_buffer_ready_and_lo;
   bp_fpga_host_nbf_s nbf_buffer_li;
   // choose nbf_i buffer if available, else io_nbf from FSM
-  assign nbf_buffer_li = nbf_v ? nbf_li : io_nbf;
+  assign nbf_buffer_li = nbf_v ? nbf_li : io_nbf_r;
   // input to buffer is valid if either nbf_i or FSM has valid nbf to send
   assign nbf_buffer_v_li = nbf_v | io_nbf_v;
   // priority to nbf buffer goes to nbf_i
   assign nbf_yumi = nbf_v & nbf_buffer_ready_and_lo;
-  // else, can handshake with FSM
-  assign io_nbf_yumi = ~nbf_v & io_nbf_v & nbf_buffer_ready_and_lo;
 
   // buffer from arbitration to PISO
   bsg_fifo_1r1w_small
@@ -140,7 +141,7 @@ module bp_fpga_host_io_out
      ,.els_p(nbf_buffer_els_p)
      ,.ready_THEN_valid_p(0)
      )
-    nbf_fifo
+    nbf_buffer
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
      // from arbitration
@@ -153,6 +154,7 @@ module bp_fpga_host_io_out
      ,.yumi_i(nbf_buffer_yumi_li)
      );
 
+  // NBF packet PISO
   bsg_parallel_in_serial_out_passthrough
    #(.width_p(uart_data_bits_p)
      ,.els_p(nbf_uart_packets_lp)
@@ -193,19 +195,80 @@ module bp_fpga_host_io_out
      ,.tx_done_o(tx_done_lo)
      );
 
-
   typedef enum logic [3:0]
   {
-
+    e_reset
+    , e_ready
+    , e_send_nbf
   } io_out_state_e;
+
+  io_out_state_e state_r, state_n;
 
   always_ff @(posedge clk_i) begin
     if (reset_i) begin
+      state_r <= e_reset;
+      io_nbf_r <= '0;
     end else begin
+      state_r <= state_n;
+      io_nbf_r <= io_nbf_n;
     end
   end
 
+  localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000);
+  localparam finish_base_addr_gp  = paddr_width_p'(64'h0010_2???);
+  localparam putch_core_base_addr_gp  = paddr_width_p'(64'h0010_3???);
+
   always_comb begin
+    // outputs
+    io_resp = '0;
+    io_resp_v_o = 1'b0;
+    io_nbf_yumi = 1'b0;
+    io_nbf_v = 1'b0;
+
+    // registers
+    state_n = state_r;
+    io_nbf_n = io_nbf_r;
+
+    unique case ()
+      e_reset: begin
+        state_n = e_ready;
+        io_nbf_n = '0;
+      end
+      e_ready: begin
+        io_nbf_n = '0;
+        unique casez (io_cmd.header.addr)
+          putchar_base_addr_gp: begin
+            io_nbf_n.opcode = e_fpga_host_nbf_putch;
+            io_nbf_n.addr = '1;
+            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
+          end
+          putchar_core_base_addr_gp: begin
+            io_nbf_n.opcode = e_fpga_host_nbf_putch;
+            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp];
+            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
+          end
+          finish_base_addr_gp: begin
+            io_nbf_n.opcode = e_fpga_host_nbf_core_done;
+            io_nbf_n.addr = io_cmd.addr;
+            io_nbf_n.data = '0;
+          end
+          default: begin end
+        endcase
+        io_resp = io_cmd;
+        io_resp_v_o = io_cmd_v;
+        io_cmd_yumi = io_cmd_v & io_resp_yumi_i;
+        state_n = io_cmd_yumi ? e_send_nbf : e_ready;
+      end
+      e_send_nbf: begin
+        io_nbf_v = 1'b1;
+        // handshake happens if nbf_i buffer not sending
+        io_nbf_yumi = ~nbf_v & nbf_buffer_ready_and_lo;
+        state_n = io_nbf_yumi ? e_ready : e_send_nbf;
+      end
+      default: begin
+        state_n = e_reset;
+      end
+    endcase
   end
 
 endmodule
