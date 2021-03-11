@@ -19,7 +19,7 @@ module uart_tx
     // raise for 1 cycle with valid tx_i data
     , input tx_v_i
     , input [data_bits_p-1:0] tx_i
-    , output logic tx_yumi_o
+    , output logic tx_ready_and_o
     , output logic tx_v_o
     , output logic tx_o
     // raised for 1 cycle when transmit complete
@@ -80,7 +80,7 @@ module uart_tx
         parity_cnt_n = parity_cnt_r;
         
         // outputs
-        tx_yumi_o = '0;
+        tx_ready_and_o = '0;
         tx_o = tx_r;
         tx_v_o = tx_v_r;
         tx_done_o = tx_done_r;
@@ -101,10 +101,11 @@ module uart_tx
                 clk_cnt_n = '0;
                 data_cnt_n = '0;
                 parity_cnt_n = '0;
+                // ready to accept data
+                tx_ready_and_o = 1'b1;
                 // valid input raised, capture data
                 // next cycle starts sending start bit
                 if (tx_v_i == 1'b1) begin
-                    tx_yumi_o = 1'b1;
                     tx_v_n = 1'b1;
                     tx_data_n = tx_i;
                     // start bit is low

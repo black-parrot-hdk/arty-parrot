@@ -85,8 +85,95 @@ module bp_fpga_host_io_out
    , output logic                            nbf_ready_and_o
    );
 
-  wire tx_v_li, tx_yumi_lo, tx_v_lo, tx_done_lo;
-  wire [uart_data_bits_p-1:0] tx_data_li;
+  `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
+
+  bp_fpga_host_nbf_s nbf_li;
+  logic nbf_v, nbf_yumi;
+
+  // buffer from nbf_i to arbitration
+  bsg_two_fifo
+   #(.width_p(nbf_width_lp))
+    nbf_in_fifo
+     (.clk_i(clk_i)
+      ,.reset_i(reset_i)
+      // from nbf_i
+      ,.v_i(nbf_v_i)
+      ,.ready_o(nbf_ready_and_o)
+      ,.data_i(nbf_i)
+      // to arbitration
+      ,.v_o(nbf_v)
+      ,.yumi_i(nbf_yumi)
+      ,.data_o(nbf_li)
+      );
+
+  // nbf packet from FSM processing io_cmd_i
+  bp_fpga_host_nbf_s io_nbf;
+  logic io_nbf_v, io_nbf_yumi;
+
+  // UART TX signals
+  logic tx_v_li, tx_ready_and_lo, tx_v_lo, tx_done_lo;
+  logic [uart_data_bits_p-1:0] tx_data_li;
+
+  // NBF PISO signals
+  logic nbf_piso_ready_and_lo;
+
+  // NBF buffer output signals
+  logic nbf_buffer_v_lo, nbf_buffer_yumi_li;
+  bp_fpga_host_nbf_s nbf_buffer_lo;
+  assign nbf_buffer_yumi_li = nbf_buffer_v_lo & nbf_piso_ready_and_lo;
+
+  // NBF buffer input signals
+  logic nbf_buffer_v_li, nbf_buffer_ready_and_lo;
+  bp_fpga_host_nbf_s nbf_buffer_li;
+  // choose nbf_i buffer if available, else io_nbf from FSM
+  assign nbf_buffer_li = nbf_v ? nbf_li : io_nbf;
+  // input to buffer is valid if either nbf_i or FSM has valid nbf to send
+  assign nbf_buffer_v_li = nbf_v | io_nbf_v;
+  // priority to nbf buffer goes to nbf_i
+  assign nbf_yumi = nbf_v & nbf_buffer_ready_and_lo;
+  // else, can handshake with FSM
+  assign io_nbf_yumi = ~nbf_v & io_nbf_v & nbf_buffer_ready_and_lo;
+
+  // buffer from arbitration to PISO
+  bsg_fifo_1r1w_small
+   #(.width_p(nbf_width_lp)
+     ,.els_p(nbf_buffer_els_p)
+     ,.ready_THEN_valid_p(0)
+     )
+    nbf_fifo
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     // from arbitration
+     ,.v_i(nbf_buffer_v_li)
+     ,.ready_o(nbf_buffer_ready_and_lo)
+     ,.data_i(nbf_buffer_li)
+     // to piso
+     ,.v_o(nbf_buffer_v_lo)
+     ,.data_o(nbf_buffer_lo)
+     ,.yumi_i(nbf_buffer_yumi_li)
+     );
+
+  bsg_parallel_in_serial_out_passthrough
+   #(.width_p(uart_data_bits_p)
+     ,.els_p(nbf_uart_packets_lp)
+     ,.hi_to_lo_p(0)
+     // byte order sent across UART TX should be opcode byte, followed by LSB to MSB
+     // of address then LSB to MSB of data
+     )
+    nbf_piso
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     // from nbf buffer
+     ,.v_i(nbf_buffer_v_lo)
+     ,.data_i(nbf_buffer_lo)
+     ,.ready_and_o(nbf_piso_ready_and_lo)
+     // to uart tx
+     ,.data_o(tx_data_li)
+     ,.v_o(tx_v_li)
+     ,.ready_and_i(tx_ready_and_lo)
+     );
+
+  // UART TX
   uart_tx
    #(.clk_per_bit_p(uart_clk_per_bit_p)
      ,.data_bits_p(uart_data_bits_p)
@@ -99,11 +186,26 @@ module bp_fpga_host_io_out
      // input
      ,.tx_v_i(tx_v_li)
      ,.tx_i(tx_data_li)
-     ,.tx_yumi_o(tx_yumi_lo)
+     ,.tx_ready_and_o(tx_ready_and_lo)
      // output
      ,.tx_v_o(tx_v_lo)
      ,.tx_o(tx_o)
      ,.tx_done_o(tx_done_lo)
      );
+
+
+  typedef enum logic [3:0]
+  {
+
+  } io_out_state_e;
+
+  always_ff @(posedge clk_i) begin
+    if (reset_i) begin
+    end else begin
+    end
+  end
+
+  always_comb begin
+  end
 
 endmodule

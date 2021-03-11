@@ -101,6 +101,9 @@ module bp_fpga_host_io_in
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
+  bp_fpga_host_nbf_s nbf_lo;
+  assign nbf_o = nbf_lo;
+
   logic rx_v_lo, rx_error_lo;
   logic [uart_data_bits_p-1:0] rx_data_lo;
   uart_rx
@@ -163,8 +166,9 @@ module bp_fpga_host_io_in
   typedef enum logic [3:0]
   {
 
-  } state_e;
+  } io_in_state_e;
 
+  logic io_nbf_v;
   wire [2:0] arb_reqs_li = {rx_error_lo, nbf_sipo_error, io_nbf_v};
   logic [2:0] arb_grants_lo;
   bsg_arb_fixed
