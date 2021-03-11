@@ -57,6 +57,9 @@ module bp_fpga_host
    , input                                   rx_i
    , output logic                            tx_o
 
+   // Error bit - typically map to FPGA LED
+   , output logic                            error_o
+
    );
 
   initial begin
@@ -81,8 +84,7 @@ module bp_fpga_host
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
   bp_fpga_host_nbf_s nbf_lo;
-  wire nbf_v_lo, nbf_yumi_li;
-  wire fence_done_lo, rx_error_lo;
+  wire nbf_v_lo, nbf_ready_and_li;
 
   bp_fpga_host_io_in
    #(.bp_params_p(bp_params_p)
@@ -105,11 +107,10 @@ module bp_fpga_host
      ,.io_resp_v_i(io_resp_v_i)
      ,.io_resp_ready_and_o(io_resp_ready_and_o)
      ,.rx_i(rx_i)
-     ,.fence_done_o(fence_done_lo)
-     ,.rx_error_o(rx_error_lo)
      ,.nbf_o(nbf_lo)
      ,.nbf_v_o(nbf_v_lo)
-     ,.nbf_yumi_i(nbf_yumi_li)
+     ,.nbf_ready_and_i(nbf_ready_and_li)
+     ,.error_o(error_o)
      );
 
   bp_fpga_host_io_out
@@ -133,11 +134,9 @@ module bp_fpga_host
      ,.io_resp_v_o(io_resp_v_o)
      ,.io_resp_yumi_i(io_resp_yumi_i)
      ,.tx_o(tx_o)
-     ,.fence_done_i(fence_done_lo)
-     ,.rx_error_i(rx_error_lo)
      ,.nbf_i(nbf_lo)
      ,.nbf_v_i(nbf_v_lo)
-     ,.nbf_yumi_o(nbf_yumi_li)
+     ,.nbf_ready_and_o(nbf_ready_and_li)
      );
 
  endmodule

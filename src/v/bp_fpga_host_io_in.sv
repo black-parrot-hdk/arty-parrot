@@ -202,6 +202,7 @@ module bp_fpga_host_io_in
   // sources are UART RX and enqueue to SIPO when not ready
   logic error_r, error_n;
   assign error_n = ~reset_i & (rx_error_lo | (rx_v_lo & ~nbf_sipo_ready_and_lo));
+  assign error_o = error_r;
 
   always_ff @(posedge clk_i) begin
     if (reset_i) begin
