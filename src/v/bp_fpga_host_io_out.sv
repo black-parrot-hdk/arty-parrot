@@ -60,6 +60,8 @@ module bp_fpga_host_io_out
     , parameter uart_parity_bit_p = 0 // 0 or 1
     , parameter uart_stop_bits_p = 1 // 1 or 2
 
+    , parameter nbf_buffer_els_p = 4
+
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
     )
   (input                                     clk_i

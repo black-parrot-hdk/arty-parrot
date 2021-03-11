@@ -72,6 +72,10 @@ module bp_fpga_host_io_in
     , parameter uart_parity_bit_p = 0 // 0 or 1
     , parameter uart_stop_bits_p = 1 // 1 or 2
 
+    , parameter nbf_buffer_els_p = 4
+
+    , localparam nbf_uart_packets_lp = (nbf_width_lp / uart_data_bits_p)
+
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
     )
   (input                                     clk_i
@@ -95,8 +99,10 @@ module bp_fpga_host_io_in
    , input                                   nbf_ready_and_i
    );
 
-  wire rx_v_lo, rx_error_lo;
-  wire [uart_data_bits_p-1:0] rx_data_lo;
+  `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
+
+  logic rx_v_lo, rx_error_lo;
+  logic [uart_data_bits_p-1:0] rx_data_lo;
   uart_rx
    #(.clk_per_bit_p(uart_clk_per_bit_p)
      ,.data_bits_p(uart_data_bits_p)
@@ -111,5 +117,71 @@ module bp_fpga_host_io_in
      ,.rx_o(rx_data_lo)
      ,.rx_error_o(rx_error_lo)
      );
+
+  logic nbf_sipo_ready_and_lo;
+  logic nbf_sipo_v_lo, nbf_sipo_ready_and_li;
+  bp_fpga_host_nbf_s nbf_lo;
+
+  bsg_serial_in_parallel_out_passthrough
+   #(.width_p(uart_data_bits_p)
+     ,.els_p(nbf_uart_packets_lp)
+     ,.hi_to_lo_p(0) // TODO: check this is correct order
+     // byte order sent across UART RX should result in SIPO producing proper
+     // NBF packet. UART RX will receive opcode byte, followed by LSB to MSB of
+     // address then LSB to MSB of data
+     )
+    nbf_sipo
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.v_i(rx_v_lo)
+     ,.ready_and_o(nbf_sipo_ready_and_lo)
+     ,.data_i(rx_data_lo)
+     ,.data_o(nbf_lo)
+     ,.v_o(nbf_sipo_v_lo)
+     ,.ready_and_i(nbf_sipo_ready_and_li)
+     );
+
+  logic nbf_buffer_v_lo, nbf_buffer_yumi_li;
+  bp_fpga_host_nbf_s nbf_buffer_lo;
+
+  bsg_fifo_1r1w_small
+   #(.width_p(nbf_width_lp)
+     ,.els_p(nbf_buffer_els_p)
+     ,.ready_THEN_valid_p(0)
+     )
+    nbf_fifo
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.v_i(nbf_sipo_v_lo)
+     ,.ready_o(nbf_sipo_ready_and_li)
+     ,.data_i(nbf_lo)
+     ,.v_o(nbf_buffer_v_lo)
+     ,.data_o(nbf_buffer_lo)
+     ,.yumi_i(nbf_buffer_yumi_li)
+     );
+
+  typedef enum logic [3:0]
+  {
+
+  } state_e;
+
+  wire [2:0] arb_reqs_li = {rx_error_lo, nbf_sipo_error, io_nbf_v};
+  logic [2:0] arb_grants_lo;
+  bsg_arb_fixed
+   #(.inputs_p(3)
+     // order arb high to low
+     ,.lo_to_hi_p(0)
+     )
+    nbf_out_arb
+    (.ready_i(nbf_ready_and_i) // TODO: is this really a ready_then_v input?
+     ,.reqs_i(arb_reqs_li)
+     ,.grants_o(arb_grants_lo)
+     );
+
+  always_ff @(posedge clk_i) begin
+  end
+
+  always_comb begin
+  end
  
 endmodule
