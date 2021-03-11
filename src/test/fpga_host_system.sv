@@ -47,18 +47,40 @@ module system
     , localparam reset_cycles_lp = 16384
     , localparam reset_cnt_width_lp = `BSG_SAFE_CLOG2(reset_cycles_lp)
     
+    , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
+    
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
     )
   (input sys_clk_i
-   // hooked up to button
+   // hooked up to a button
    , input reset_i
    , input rx_i
+   // hooked up to a button
    , input send_i
    , output logic tx_o
+   // hooked up to an led
    , output logic error_o
-   // hooked up to reset_r
-   , output logic led_o
+   // hooked up to reset_r, goes to an led
+   , output logic reset_o
    );
+  
+  logic reset_lo;
+  debounce #() reset_debounce
+   (.clk_i(sys_clk_i)
+    ,.button_i(reset_i)
+    ,.pressed_o(reset_lo)
+    ,.down_o()
+    ,.up_o()
+    );
+  
+  logic send_lo;
+  debounce #() send_debounce
+   (.clk_i(sys_clk_i)
+    ,.button_i(send_i)
+    ,.pressed_o(send_lo)
+    ,.down_o()
+    ,.up_o()
+    );
   
   `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
   // to FPGA Host
@@ -75,36 +97,42 @@ module system
   bp_bedrock_io_mem_msg_payload_s io_cmd_lo_payload, io_resp_li_payload;
   assign io_cmd_lo_payload = io_cmd.header.payload;
   
-  logic [7:0] data_byte_r, data_byte_n;
+  logic [7:0] cmd_data_byte_r, cmd_data_byte_n;
+  logic [7:0] resp_data_byte_r, resp_data_byte_n;
   
   typedef enum logic [2:0]
   {
     e_reset
+    , e_ready
     , e_send
     , e_incr
+    , e_resp
   } send_state_e;
   send_state_e send_state_r, send_state_n;
   
   // io loopback logic
   always_comb begin
+    // from BP to FPGA host
     io_cmd_li = '0;
     io_cmd_v_li = '0;
     io_cmd_li_payload = '0;
     io_resp_yumi_li = '0;
     
+    // from FPGA Host to BP
     io_resp_li = '0;
     io_resp_v_li = '0;
     io_resp_li_payload = '0;
     io_cmd_yumi_li = '0;
     
-    data_byte_n = data_byte_r;
+    cmd_data_byte_n = cmd_data_byte_r;
+    resp_data_byte_n = resp_data_byte_r;
     send_state_n = send_state_r;
     
     // from FPGA Host to BP
     if (io_cmd_v_lo) begin
       io_resp_li = io_cmd_lo;
       if (io_cmd_lo.header.msg_type.mem == e_bedrock_mem_uc_rd) begin
-        io_resp_li.data[0+:8] = data_byte_r;
+        io_resp_li.data[0+:8] = resp_data_byte_r;
       end
       io_resp_v_li = 1'b1;
       io_cmd_yumi_li = io_cmd_v_lo & io_resp_ready_and_lo;
@@ -113,14 +141,31 @@ module system
     // from BP to FPGA Host
     unique case (send_state_r)
       e_reset: begin
-        state_n = e_send;
+        send_state_n = e_ready;
+      end
+      e_ready: begin
+        if (send_lo) begin
+          send_state_n = e_send;
+        end
       end
       e_send: begin
+        io_cmd_v_li = 1'b1;
+        io_cmd_li.header.msg_type.mem = e_bedrock_mem_uc_wr;
+        io_cmd_li.header.subop = e_bedrock_store;
+        io_cmd_li.header.addr = putchar_base_addr_gp;
+        io_cmd_li.data[0+:8] = cmd_data_byte_r;
+        send_state_n = io_cmd_ready_and_lo ? e_incr : e_send;
       end
       e_incr: begin
+        cmd_data_byte_n = cmd_data_byte_r + 'd1;
+        send_state_n = e_resp;
+      end
+      e_resp: begin
+        io_resp_yumi_li = io_resp_v_lo;
+        send_state_n = io_resp_yumi_li ? e_ready : e_resp;
       end
       default: begin
-        state_n = e_reset;
+        send_state_n = e_reset;
       end
     endcase
   end
@@ -153,17 +198,19 @@ module system
   // sequential logic
   logic reset_r, reset_n;
   logic [reset_cnt_width_lp-1:0] reset_cnt_r, reset_cnt_n;
-  assign led_o = reset_r;
+  assign reset_o = reset_r;
   always_ff @(posedge sys_clk_i) begin
-    if (reset_i) begin
+    if (reset_lo) begin
       reset_r <= 1'b1;
       reset_cnt_r <= '0;
-      data_byte_r <= '0;
+      cmd_data_byte_r <= '0;
+      resp_data_byte_r <= '0;
       send_state_r <= e_reset;
     end else begin
       reset_r <= reset_n;
       reset_cnt_r <= reset_cnt_n;
-      data_byte_r <= data_byte_n;
+      cmd_data_byte_r <= cmd_data_byte_n;
+      resp_data_byte_r <= resp_data_byte_n;
       send_state_r <= send_state_n;
     end
   end
