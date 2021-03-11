@@ -95,6 +95,16 @@ def runBinary(args):
 def runHex(args):
   pass
 
+def readNBF():
+  opcode = sp.read(1).hex()
+  addr = sp.read(5).hex()
+  data = sp.read(8).hex()
+  print('NBF: {0}_{1}_{2}'.format(opcode, addr, data)
+
+def nbfHasResponse(nbf_bytes):
+  resp_ops = [b'\xff', b'\xfe', b'\x02', b'\x03']
+  return (nbf_bytes[0] in resp_ops)
+
 def sendNBF(args):
   # process input file as BlackParrot NBF format
   # each line of nbf file is hex characters
@@ -107,7 +117,11 @@ def sendNBF(args):
         line_bytes = hexStringToBytes(line)
         sp.write(line_bytes)
         bytes_written += len(line_bytes)
+        if (nbfHasResponse(line_bytes)):
+          readNBF()
     print('wrote {0} bytes from nbf'.format(bytes_written))
+    while (True):
+      readNBF()
   except:
     print('failed to transfer nbf file')
     if not sp is None and sp.is_open:
