@@ -249,8 +249,8 @@ module bp_fpga_host_io_out
           end
           finish_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_core_done;
-            io_nbf_n.addr = io_cmd.addr;
-            io_nbf_n.data = '0;
+            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp];
+            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
           end
           default: begin end
         endcase

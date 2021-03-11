@@ -30,29 +30,7 @@
  *
  *
  * TODO:
- * NBF SIPO (bsg_serial_in_parallel_out_passthrough)
- * - convert UART RX bytes to NBF packet
- * - 1 byte input from UART RX to NBF packet (14 byte) output to NBF Buffer
- *
- * NBF Buffer (bsg_two_fifo or bsg_fifo_1r1w_small)
- * - buffer NBF packets from NBF SIPO
- *
- * Arbitration (bsg_arb_fixed)
- * - three inputs: io_resp_i FSM, SIPO enqueue error, UART RX error
- * - priority (high to low) = UART RX error, SIPO enqueue error, io_resp_i FSM
- * - outputs NBF packet on nbf_o port to bp_fpga_host_io_out
- *
- * FSM
- * - send io_cmd_o based on received NBF packets in NBF buffer
- * - sending should be non-blocking with processing io_resp_i so we don't stall the
- *   FSM and prevent it from consuming NBF buffer packets if io_cmd_o is available
- * - process io_resp_i and generate NBF packets for responses to PC Host - send to arbitration
- * - process NBF packets not requiring io_cmd to be sent.
- *   These include nbf fence and nbf finish
- *
- * io_cmd/resp credit flow control (bsg_flow_counter)
- * - credit flow control for cmd/resp network
- * - used by FSM to process nbf fence commands
+ * Send error to PC Host on SIPO enqueue error or rx_error_o raised
  *
  */
 
@@ -97,9 +75,35 @@ module bp_fpga_host_io_in
    , output logic [nbf_width_lp-1:0]         nbf_o
    , output logic                            nbf_v_o
    , input                                   nbf_ready_and_i
+
+   // Error signal for debug
+   // - implemented as a sticky bit
+   , output logic                            error_o
    );
 
+  `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
+
+  bp_bedrock_io_mem_msg_s io_cmd, io_resp;
+  assign io_cmd_o = io_cmd;
+
+  logic io_resp_v_lo, io_resp_yumi_li;
+  // IO response buffer
+  bsg_two_fifo
+   #(.width_p($bits(bp_bedrock_io_mem_msg_s)))
+    io_resp_fifo
+     (.clk_i(clk_i)
+      ,.reset_i(reset_i)
+      // from input
+      ,.v_i(io_resp_v_i)
+      ,.ready_o(io_resp_ready_and_o)
+      ,.data_i(io_resp_i)
+      // to FSM
+      ,.v_o(io_resp_v_lo)
+      ,.yumi_i(io_resp_yumi_li)
+      ,.data_o(io_resp)
+      );
+
 
   bp_fpga_host_nbf_s nbf_lo;
   assign nbf_o = nbf_lo;
@@ -115,33 +119,37 @@ module bp_fpga_host_io_in
     rx
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
+     // from PC / UART pin
      ,.rx_i(rx_i)
+     // to nbf_sipo
      ,.rx_v_o(rx_v_lo)
      ,.rx_o(rx_data_lo)
+     // error signal
      ,.rx_error_o(rx_error_lo)
      );
 
   logic nbf_sipo_ready_and_lo;
   logic nbf_sipo_v_lo, nbf_sipo_ready_and_li;
-  bp_fpga_host_nbf_s nbf_lo;
+  bp_fpga_host_nbf_s nbf_sipo_lo;
 
+  // Process bytes from UART RX
+  // NBF packet arrives opcode, address (LSB to MSB), data (LSB to MSB)
   bsg_serial_in_parallel_out_passthrough
    #(.width_p(uart_data_bits_p)
      ,.els_p(nbf_uart_packets_lp)
-     ,.hi_to_lo_p(0) // TODO: check this is correct order
-     // byte order sent across UART RX should result in SIPO producing proper
-     // NBF packet. UART RX will receive opcode byte, followed by LSB to MSB of
-     // address then LSB to MSB of data
+     ,.hi_to_lo_p(0)
      )
     nbf_sipo
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
+     // from UART RX
      ,.v_i(rx_v_lo)
      ,.ready_and_o(nbf_sipo_ready_and_lo)
      ,.data_i(rx_data_lo)
-     ,.data_o(nbf_lo)
+     // to nbf_buffer
      ,.v_o(nbf_sipo_v_lo)
      ,.ready_and_i(nbf_sipo_ready_and_li)
+     ,.data_o(nbf_sipo_lo)
      );
 
   logic nbf_buffer_v_lo, nbf_buffer_yumi_li;
@@ -152,40 +160,164 @@ module bp_fpga_host_io_in
      ,.els_p(nbf_buffer_els_p)
      ,.ready_THEN_valid_p(0)
      )
-    nbf_fifo
+    nbf_buffer
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
+     // from nbf_sipo
      ,.v_i(nbf_sipo_v_lo)
      ,.ready_o(nbf_sipo_ready_and_li)
-     ,.data_i(nbf_lo)
+     ,.data_i(nbf_sipo_lo)
+     // to FSM
      ,.v_o(nbf_buffer_v_lo)
-     ,.data_o(nbf_buffer_lo)
      ,.yumi_i(nbf_buffer_yumi_li)
+     ,.data_o(nbf_buffer_lo)
      );
 
-  typedef enum logic [3:0]
-  {
+  wire is_fence_packet = (nbf_buffer_lo.opcode == e_fpga_host_nbf_fence);
+  wire is_finish_packet = (nbf_buffer_lo.opcode == e_fpga_host_nbf_finish);
 
+  typedef enum logic [1:0]
+  {
+    e_reset
+    , e_send_nbf
   } io_in_state_e;
 
-  logic io_nbf_v;
-  wire [2:0] arb_reqs_li = {rx_error_lo, nbf_sipo_error, io_nbf_v};
-  logic [2:0] arb_grants_lo;
-  bsg_arb_fixed
-   #(.inputs_p(3)
-     // order arb high to low
-     ,.lo_to_hi_p(0)
-     )
-    nbf_out_arb
-    (.ready_i(nbf_ready_and_i) // TODO: is this really a ready_then_v input?
-     ,.reqs_i(arb_reqs_li)
-     ,.grants_o(arb_grants_lo)
+  io_in_state_e state_r, state_n;
+
+  logic [`BSG_WIDTH(io_noc_max_credits_p)-1:0] credit_count_lo;
+  bsg_flow_counter
+   #(.els_p(io_noc_max_credits_p))
+   nbf_counter
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.v_i(io_cmd_yumi_i)
+     ,.ready_i(1'b1)
+     ,.yumi_i(io_resp_yumi_li)
+     ,.count_o(credit_count_lo)
      );
+  wire credits_full_lo = (credit_count_lo == io_noc_max_credits_p);
+  wire credits_empty_lo = (credit_count_lo == '0);
+
+  // sticky error bit
+  // sources are UART RX and enqueue to SIPO when not ready
+  logic error_r, error_n;
+  assign error_n = ~reset_i & (rx_error_lo | (rx_v_lo & ~nbf_sipo_ready_and_lo));
 
   always_ff @(posedge clk_i) begin
+    if (reset_i) begin
+      error_r <= 1'b0;
+      state_r <= e_reset;
+    end else begin
+      error_r <= error_r | error_n;
+      state_r <= state_n;
+    end
   end
 
+  // nbf buffer sends packet to nbf_o port for finish and fence
+  wire nbf_buffer_to_nbf_o = nbf_buffer_v_lo & (is_finish_packet | (credits_empty_lo & is_fence_packet));
+
   always_comb begin
-  end
+
+    // outputs
+    nbf_lo = '0;
+    nbf_v_o = '0;
+    io_cmd_v_o = '0;
+    io_cmd = '0;
+
+    // bufer dequeue signals
+    io_resp_yumi_li = 1'b0;
+    nbf_buffer_yumi_li = '0;
+
+    // form io_cmd from current nbf_buffer output
+    io_cmd.data = {'0, nbf_buffer_lo.data};
+    io_cmd_payload = '0;
+    // TODO: why does bp_top testbench pass this to bp_nonsynth_nbf_loader as LCE ID?
+    io_cmd_payload.lce_id = lce_id_width_p'('b10);
+    io_cmd.header.payload = io_cmd_payload;
+    io_cmd.header.addr = nbf_buffer_lo.addr;
+    unique case (nbf_bufer_lo.opcode)
+      e_fpga_host_nbf_write_4: begin
+        io_cmd.header.size = e_bedrock_msg_size_4;
+        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_wr;
+        io_cmd.header.subop = e_bedrock_store;
+      end
+      e_fpga_host_nbf_write_8: begin
+        io_cmd.header.size = e_bedrock_msg_size_8;
+        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_wr;
+        io_cmd.header.subop = e_bedrock_store;
+      end
+      e_fpga_host_nbf_read_4: begin
+        io_cmd.header.size = e_bedrock_msg_size_4;
+        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_rd;
+      end
+      e_fpga_host_nbf_read_8: begin
+        io_cmd.header.size = e_bedrock_msg_size_8;
+        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_rd;
+      end
+      default: begin end
+    endcase
+
+    unique case (state_r)
+      e_reset: begin
+        state_n = reset_i ? e_reset : e_send_nbf;
+      end
+      e_send_nbf: begin
+        // Current NBF command from PC Host is in nbf_buffer - two options:
+        // 1. send command to BlackParrot over io_cmd_o
+        // 2. send NBF response back to PC Host through bp_fpga_host_io_out
+
+        // IO Resp for reads may also try to send NBF response to PC Host
+        // through bp_fpga_host_io_out, but have lower priority than NBF buffer
+
+        // Option 1 - send io_cmd_o
+        // send IO command for current NBF command
+        // requires available credits and that NBF cmd is not fence or finish
+        io_cmd_v_o = nbf_buffer_v_lo & ~credits_full_lo
+                     & ~is_fence_packet & ~is_finish_packet;
+
+        // Option 2 - send nbf_o back to PC Host
+        // send NBF packet to bp_fpga_host_io_out for current NBF command
+        // if required (fence or finish)
+        nbf_v_o = nbf_buffer_to_nbf_o;
+        if (is_fence_packet) begin
+          nbf_lo.opcode = e_fpga_host_nbf_fence;
+        end else if (is_finish_packet) begin
+          nbf_lo.opcode = e_fpga_host_nbf_finish;
+        end
+
+        // consume current NBF command from buffer when it either sends
+        // on IO network or handshakes with bp_fpga_host_io_out
+        nbf_buffer_yumi_li = io_cmd_yumi_i | (nbf_v_o & nbf_ready_and_i);
+
+        // Process IO responses
+        if (io_resp_v_lo) begin
+          unique case (io_resp.header.msg_type.mem)
+            // uc_wr was NBF store to BP - sink response
+            e_bedrock_mem_uc_wr: begin
+              io_resp_yumi_li = 1'b1;
+            end
+            // uc_rd is response from NBF read from BP - send NBF packet
+            // to bp_fpga_host_io_out
+            e_bedrock_mem_uc_rd: begin
+              // can only process if nbf_o not in use
+              if (~nbf_buffer_to_nbf_o) begin
+                nbf_v_o = 1'b1;
+                io_resp_yumi_li = nbf_ready_and_i;
+                unique case (io_resp.header.size)
+                  e_bedrock_msg_size_4: nbf_lo.opcode = e_fpga_host_nbf_read_4;
+                  e_bedrock_msg_size_8: nbf_lo.opcode = e_fpga_host_nbf_read_8;
+                  default: nbf_lo.opcode = e_fpga_host_nbf_error;
+                endcase
+                nbf_lo.addr = io_resp.header.addr;
+                nbf_lo.data = io_resp.data[0+:nbf_data_width_p];
+              end
+            end
+            default: begin end
+          endcase // io_resp msg_type
+        end // io_resp_v_lo
+      end // e_send_nbf
+      default: begin end
+    endcase // state_r
+  end // always_comb
  
 endmodule
