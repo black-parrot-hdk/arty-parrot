@@ -99,7 +99,7 @@ def readNBF():
   opcode = sp.read(1).hex()
   addr = sp.read(5).hex()
   data = sp.read(8).hex()
-  print('NBF: {0}_{1}_{2}'.format(opcode, addr, data)
+  print('NBF: {0}_{1}_{2}'.format(opcode, addr, data))
 
 def nbfHasResponse(nbf_bytes):
   resp_ops = [b'\xff', b'\xfe', b'\x02', b'\x03']
