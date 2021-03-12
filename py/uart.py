@@ -76,13 +76,13 @@ def hexStringToBytes(string):
 # Exit and Signal handlers
 def exitHandler():
   print("goodbye!")
-  if sp.is_open:
+  if not sp is None and sp.is_open:
     print("closing serial port: {0}".format(sp.name))
     sp.close()
 
 def signalHandler(sig, frame):
   print("signal handler")
-  if sp.is_open:
+  if not sp is None and sp.is_open:
     print("closing serial port: {0}".format(sp.name))
     sp.close()
   sys.exit(1)
