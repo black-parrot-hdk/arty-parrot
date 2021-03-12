@@ -87,15 +87,15 @@ module system
   bp_bedrock_io_mem_msg_s io_cmd_li, io_resp_lo;
   logic io_cmd_v_li, io_cmd_ready_and_lo;
   logic io_resp_v_lo, io_resp_yumi_li;
-  bp_bedrock_io_mem_msg_payload_s io_cmd_li_payload, io_resp_lo_payload;
-  assign io_resp_lo_payload = io_resp.header.payload;
+  bp_bedrock_io_mem_payload_s io_cmd_li_payload, io_resp_lo_payload;
+  assign io_resp_lo_payload = io_resp_lo.header.payload;
   
   // from FPGA Host
   bp_bedrock_io_mem_msg_s io_cmd_lo, io_resp_li;
   logic io_cmd_v_lo, io_cmd_yumi_li;
   logic io_resp_v_li, io_resp_ready_and_lo;
-  bp_bedrock_io_mem_msg_payload_s io_cmd_lo_payload, io_resp_li_payload;
-  assign io_cmd_lo_payload = io_cmd.header.payload;
+  bp_bedrock_io_mem_payload_s io_cmd_lo_payload, io_resp_li_payload;
+  assign io_cmd_lo_payload = io_cmd_lo.header.payload;
   
   logic [7:0] cmd_data_byte_r, cmd_data_byte_n;
   logic [7:0] resp_data_byte_r, resp_data_byte_n;
@@ -218,9 +218,9 @@ module system
   // reset combinational logic
   always_comb begin
     if (reset_cnt_r < reset_cycles_lp-1) begin
-      reset_cnt_r <= reset_cnt_n + 'd1;
+      reset_cnt_n = reset_cnt_n + 'd1;
     end else begin
-      reset_r <= 1'b0;
+      reset_n = 1'b0;
     end
   end
   

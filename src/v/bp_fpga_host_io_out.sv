@@ -41,6 +41,7 @@ module bp_fpga_host_io_out
     , parameter uart_data_bits_p = 8 // between 5 and 9 bits
     , parameter uart_parity_bit_p = 0 // 0 or 1
     , parameter uart_stop_bits_p = 1 // 1 or 2
+    , parameter uart_parity_odd_p = 0 // 0 or 1
 
     , parameter nbf_buffer_els_p = 4
     
@@ -192,6 +193,7 @@ module bp_fpga_host_io_out
      ,.data_bits_p(uart_data_bits_p)
      ,.parity_bit_p(uart_parity_bit_p)
      ,.stop_bits_p(uart_stop_bits_p)
+     ,.parity_odd_p(uart_parity_odd_p)
      )
     tx
     (.clk_i(clk_i)

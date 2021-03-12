@@ -54,6 +54,7 @@ module bp_fpga_host_io_in
     , parameter uart_data_bits_p = 8 // between 5 and 9 bits
     , parameter uart_parity_bit_p = 0 // 0 or 1
     , parameter uart_stop_bits_p = 1 // 1 or 2
+    , parameter uart_parity_odd_p = 0 // 0 or 1
 
     , parameter nbf_buffer_els_p = 4
 
@@ -91,7 +92,7 @@ module bp_fpga_host_io_in
 
   bp_bedrock_io_mem_msg_s io_cmd, io_resp;
   assign io_cmd_o = io_cmd;
-  bp_bedrock_io_mem_msg_payload_s io_cmd_payload;
+  bp_bedrock_io_mem_payload_s io_cmd_payload;
 
   logic io_resp_v_lo, io_resp_yumi_li;
   // IO response buffer
@@ -121,6 +122,7 @@ module bp_fpga_host_io_in
      ,.data_bits_p(uart_data_bits_p)
      ,.parity_bit_p(uart_parity_bit_p)
      ,.stop_bits_p(uart_stop_bits_p)
+     ,.parity_odd_p(uart_parity_odd_p)
      )
     rx
     (.clk_i(clk_i)
@@ -242,7 +244,7 @@ module bp_fpga_host_io_in
     io_cmd_payload.lce_id = lce_id_width_p'('b10);
     io_cmd.header.payload = io_cmd_payload;
     io_cmd.header.addr = nbf_buffer_lo.addr;
-    unique case (nbf_bufer_lo.opcode)
+    unique case (nbf_buffer_lo.opcode)
       e_fpga_host_nbf_write_4: begin
         io_cmd.header.size = e_bedrock_msg_size_4;
         io_cmd.header.msg_type.mem = e_bedrock_mem_uc_wr;
