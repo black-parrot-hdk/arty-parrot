@@ -6,23 +6,24 @@ module debounce
    , output logic         up_o
    );
 
-logic b0, b1;
+logic b0 = '0;
+logic b1 = '0;
 always @(posedge clk_i) begin
   b0 <= ~button_i;
   b1 <= b0;
 end
 
-logic [15:0] cnt;
-logic pressed;
+logic [15:0] cnt = '0;
+logic pressed = '0;
 assign pressed_o = pressed;
 wire idle = (pressed_o == b1);
 wire cnt_max = &cnt;
 
 always @(posedge clk_i) begin
   if (idle) begin
-    cnt <= 0;
+    cnt <= '0;
   end else begin
-    cnt <= cnt <= 'd1;
+    cnt <= cnt + 'd1;
     if (cnt_max) pressed <= ~pressed;
   end
 end

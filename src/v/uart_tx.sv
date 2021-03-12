@@ -69,6 +69,10 @@ module uart_tx
         end
     end
     
+    assign tx_o = tx_r;
+    assign tx_v_o = tx_v_r;
+    assign tx_done_o = tx_done_r;
+    
     always_comb begin
         // state
         tx_state_n = tx_state_r;
@@ -79,18 +83,16 @@ module uart_tx
         tx_done_n = tx_done_r;
         parity_cnt_n = parity_cnt_r;
         
-        // outputs
-        tx_ready_and_o = '0;
-        tx_o = tx_r;
-        tx_v_o = tx_v_r;
-        tx_done_o = tx_done_r;
-        
         clk_cnt_n = clk_cnt_r;
         data_cnt_n = data_cnt_r;
+        
+        // outputs
+        tx_ready_and_o = '0;
         
         case (tx_state_r)
             e_reset: begin
                 tx_state_n = e_idle;
+                tx_n = 1'b1;
             end
             // waiting for valid data in
             e_idle: begin

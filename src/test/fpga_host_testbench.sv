@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
 
 `include "bp_fpga_host_defines.svh"
-`include "bp_fpga_host_pkgdef.svh"
 
 module fpga_host_testbench
+  import bp_fpga_host_pkg::*;
   #()
   ();
 
@@ -29,17 +29,9 @@ module fpga_host_testbench
   parameter io_in_nbf_buffer_els_p = 4;
   parameter io_out_nbf_buffer_els_p = 4;
   
-  parameter test_packets_p = 10;
+  parameter test_packets_p = 2;
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
-  /*
-  typedef struct packed
-  {
-    logic [nbf_data_width_p-1:0]   data;
-    logic [nbf_addr_width_p-1:0]   addr;
-    bp_fpga_host_nbf_opcode_e   opcode;
-  } bp_fpga_host_nbf_s;
-  */
 
   bit clk = 1'b0;
   bit reset = 1'b1;
@@ -87,7 +79,7 @@ module fpga_host_testbench
      ,.parity_odd_p(uart_parity_odd_p)
      )
     rx
-    (.clk_i(clk_i)
+    (.clk_i(clk)
      ,.reset_i(reset)
      // from PC / UART pin
      ,.rx_i(tx_lo)
@@ -109,7 +101,7 @@ module fpga_host_testbench
      ,.parity_odd_p(uart_parity_odd_p)
      )
     tx
-    (.clk_i(clk_i)
+    (.clk_i(clk)
      ,.reset_i(reset)
      // input
      ,.tx_v_i(tx_v_li)
@@ -120,26 +112,25 @@ module fpga_host_testbench
      ,.tx_o(rx_li)
      ,.tx_done_o(tx_done_lo)
      );
-         
-    task send_data (input [uart_data_bits_p-1:0] data_i);
-      tx_v_li = 1'b1;
-      tx_data_li = data_i;
-      @(posedge tx_ready_and_lo);
-      #(CLOCK_PERIOD_NS);
-      tx_v_li = 1'b0;
-      tx_data_li = '0;
-      #(CLOCK_PERIOD_NS);
-    endtask
-    
+
     integer jj = 0;
-    task send_nbf (input bp_fgpa_host_nbf_s nbf_i);
+    task send_nbf (input bp_fpga_host_nbf_s nbf_i);
       for (jj = 0; jj < 14; jj = jj+1) begin
-        send_data(nbf_i[8*jj+:8]);
+        // start send on posedge clk
+        @(posedge clk)
+        tx_data_li = nbf_i[8*jj+:8];
+        wait(tx_ready_and_lo == 1'b1);
+        tx_v_li = 1'b1;
+        #(CLOCK_PERIOD_NS);
+        #(CLOCK_PERIOD_NS/2);
+        tx_v_li = 1'b0;
+        tx_data_li = '0;
+        #(CLOCK_PERIOD_NS/2);
       end
     endtask
     
     integer kk = 0;
-    task read_nbf (output bp_fgpa_host_nbf_s nbf_o);
+    task read_nbf (output bp_fpga_host_nbf_s nbf_o);
       nbf_o = '0;
       for (kk = 0; kk < 14; kk = kk+1) begin
         @(posedge rx_v_lo);
@@ -148,11 +139,10 @@ module fpga_host_testbench
     endtask
     
     integer ii = 0;
-    bp_fgpa_host_nbf_s nbf_in, nbf_out;
+    bp_fpga_host_nbf_s nbf_in, nbf_out;
     initial begin
         tx_v_li = '0;
         tx_data_li = '0;
-        data_r = '0;
         nbf_in = '0;
         nbf_in.opcode = e_fpga_host_nbf_finish;
         #(reset_clks_p * 2);

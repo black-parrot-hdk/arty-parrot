@@ -31,35 +31,15 @@ module fpga_host_system
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
     )
   (input sys_clk_i
-   // hooked up to a button
    , input reset_i
    , input rx_i
-   // hooked up to a button
    , input send_i
    , output logic tx_o
-   // hooked up to an led
+   // hooked up to a led
    , output logic error_o
-   // hooked up to reset_r, goes to an led
+   // hooked up to a led
    , output logic reset_o
    );
-  
-  logic reset_lo;
-  debounce #() reset_debounce
-   (.clk_i(sys_clk_i)
-    ,.button_i(reset_i)
-    ,.pressed_o(reset_lo)
-    ,.down_o()
-    ,.up_o()
-    );
-  
-  logic send_lo;
-  debounce #() send_debounce
-   (.clk_i(sys_clk_i)
-    ,.button_i(send_i)
-    ,.pressed_o(send_lo)
-    ,.down_o()
-    ,.up_o()
-    );
   
   `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
   // to FPGA Host
@@ -78,6 +58,14 @@ module fpga_host_system
   
   logic [7:0] cmd_data_byte_r, cmd_data_byte_n;
   logic [7:0] resp_data_byte_r, resp_data_byte_n;
+  
+  assign reset_o = reset_i ? 1'b1 : 1'b0;
+  
+  wire send_lo = send_i;
+  // TODO:
+  // logic send_lo;
+  // debounce send_i
+  // edge detect send_i_debounced
   
   typedef enum logic [2:0]
   {
@@ -155,7 +143,7 @@ module fpga_host_system
      )
     fpga_host
      (.clk_i(sys_clk_i)
-      ,.reset_i(reset_r)
+      ,.reset_i(reset_i)
       // to FPGA Host
       ,.io_cmd_i(io_cmd_li)
       ,.io_cmd_v_i(io_cmd_v_li)
@@ -178,31 +166,15 @@ module fpga_host_system
   assign error_o = error_lo ? 1'b1 : 1'b0;
 
   // sequential logic
-  logic reset_r, reset_n;
-  logic [reset_cnt_width_lp-1:0] reset_cnt_r, reset_cnt_n;
-  assign reset_o = reset_r ? 1'b1 : 1'b0;
   always_ff @(posedge sys_clk_i) begin
-    if (reset_lo) begin
-      reset_r <= 1'b1;
-      reset_cnt_r <= '0;
+    if (reset_i) begin
       cmd_data_byte_r <= '0;
       resp_data_byte_r <= '0;
       send_state_r <= e_reset;
     end else begin
-      reset_r <= reset_n;
-      reset_cnt_r <= reset_cnt_n;
       cmd_data_byte_r <= cmd_data_byte_n;
       resp_data_byte_r <= resp_data_byte_n;
       send_state_r <= send_state_n;
-    end
-  end
-  
-  // reset combinational logic
-  always_comb begin
-    if (reset_cnt_r < reset_cycles_lp-1) begin
-      reset_cnt_n = reset_cnt_n + 'd1;
-    end else begin
-      reset_n = 1'b0;
     end
   end
   

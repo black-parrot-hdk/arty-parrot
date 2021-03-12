@@ -226,6 +226,7 @@ module bp_fpga_host_io_in
   wire nbf_buffer_to_nbf_o = nbf_buffer_v_lo & (is_finish_packet | (credits_empty_lo & is_fence_packet));
 
   always_comb begin
+    state_n = state_r;
 
     // outputs
     nbf_lo = '0;
