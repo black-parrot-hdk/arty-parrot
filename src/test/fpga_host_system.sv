@@ -1,29 +1,8 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 03/01/2021 11:17:55 AM
-// Design Name: 
-// Module Name: system
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
 `include "bp_common_defines.svh"
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
-module system
+module fpga_host_system
   import bp_common_pkg::*;
   import bp_me_pkg::*;
   import bp_fpga_host_pkg::*;
@@ -170,6 +149,7 @@ module system
     endcase
   end
   
+  logic error_lo;
   bp_fpga_host
    #(.bp_params_p(e_bp_default_cfg)
      )
@@ -192,13 +172,15 @@ module system
       ,.io_resp_ready_and_o(io_resp_ready_and_lo)
       ,.rx_i(rx_i)
       ,.tx_o(tx_o)
-      ,.error_o(error_o)
+      ,.error_o(error_lo)
       );
+
+  assign error_o = error_lo ? 1'b1 : 1'b0;
 
   // sequential logic
   logic reset_r, reset_n;
   logic [reset_cnt_width_lp-1:0] reset_cnt_r, reset_cnt_n;
-  assign reset_o = reset_r;
+  assign reset_o = reset_r ? 1'b1 : 1'b0;
   always_ff @(posedge sys_clk_i) begin
     if (reset_lo) begin
       reset_r <= 1'b1;

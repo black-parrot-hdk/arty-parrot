@@ -87,7 +87,7 @@ module bp_fpga_host
   end
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
-
+  
   bp_fpga_host_nbf_s nbf_lo;
   wire nbf_v_lo, nbf_ready_and_li;
 
