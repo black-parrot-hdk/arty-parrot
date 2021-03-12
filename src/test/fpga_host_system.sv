@@ -59,9 +59,31 @@ module fpga_host_system
   logic [7:0] cmd_data_byte_r, cmd_data_byte_n;
   logic [7:0] resp_data_byte_r, resp_data_byte_n;
   
-  assign reset_o = reset_i ? 1'b1 : 1'b0;
+  logic reset_r = 1'b1;
+  logic reset_n;
+  logic [15:0] reset_cnt_r = '0;
+  logic [15:0] reset_cnt_n;
   
-  wire send_lo = send_i;
+  always_ff @(posedge sys_clk_i) begin
+    reset_cnt_r <= reset_cnt_n;
+    reset_r <= reset_n;
+  end
+  
+  always_comb begin
+    reset_n = reset_r;
+    reset_cnt_n = reset_cnt_r;
+    if (reset_cnt_r < '1) begin
+      reset_cnt_n = reset_cnt_r + 'd1;
+    end
+    if (reset_cnt_r == '1) begin
+      reset_n = 1'b0;
+    end
+  end
+  
+  assign reset_o = reset_r ? 1'b1 : 1'b0;
+  
+  wire send_lo = 1'b0;
+  wire unused = reset_i & send_i;
   // TODO:
   // logic send_lo;
   // debounce send_i
@@ -143,7 +165,7 @@ module fpga_host_system
      )
     fpga_host
      (.clk_i(sys_clk_i)
-      ,.reset_i(reset_i)
+      ,.reset_i(reset_r)
       // to FPGA Host
       ,.io_cmd_i(io_cmd_li)
       ,.io_cmd_v_i(io_cmd_v_li)
@@ -167,7 +189,7 @@ module fpga_host_system
 
   // sequential logic
   always_ff @(posedge sys_clk_i) begin
-    if (reset_i) begin
+    if (reset_r) begin
       cmd_data_byte_r <= '0;
       resp_data_byte_r <= '0;
       send_state_r <= e_reset;
