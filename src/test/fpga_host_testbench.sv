@@ -65,7 +65,7 @@ module fpga_host_testbench
         ,.io_in_nbf_buffer_els_p(io_in_nbf_buffer_els_p)
         ,.io_out_nbf_buffer_els_p(io_out_nbf_buffer_els_p)
         )
-      fpga_host
+      fpga_host_system
       (.sys_clk_i(clk)
        ,.reset_i(reset)
        ,.rx_i(rx_li)

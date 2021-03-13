@@ -304,7 +304,18 @@ module bp_fpga_host_io_in
           unique case (io_resp.header.msg_type.mem)
             // uc_wr was NBF store to BP - sink response
             e_bedrock_mem_uc_wr: begin
-              io_resp_yumi_li = 1'b1;
+              // can only process if nbf_o not in use
+              if (~nbf_buffer_to_nbf_o) begin
+                nbf_v_o = 1'b1;
+                io_resp_yumi_li = nbf_ready_and_i;
+                unique case (io_resp.header.size)
+                  e_bedrock_msg_size_4: nbf_lo.opcode = e_fpga_host_nbf_write_4;
+                  e_bedrock_msg_size_8: nbf_lo.opcode = e_fpga_host_nbf_write_8;
+                  default: nbf_lo.opcode = e_fpga_host_nbf_error;
+                endcase
+                nbf_lo.addr = io_resp.header.addr;
+                nbf_lo.data = io_resp.data[0+:nbf_data_width_p];
+              end
             end
             // uc_rd is response from NBF read from BP - send NBF packet
             // to bp_fpga_host_io_out
