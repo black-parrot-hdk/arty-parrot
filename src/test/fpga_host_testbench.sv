@@ -8,14 +8,14 @@ module fpga_host_testbench
   ();
 
   parameter CLOCK_PERIOD_NS = 10; // 100 MHz
-  parameter BAUD_RATE = 9600; // UART Baud Rate
+  parameter BAUD_RATE = 115200; // UART Baud Rate
 
   // max frequency is 1 GHz (due to use of NS for clock period)
   localparam clk_freq_hz = (10**9) / CLOCK_PERIOD_NS;
   localparam clk_per_bit_p = (clk_freq_hz / BAUD_RATE); // 10416 at 100MHz, 9600 Baud
   localparam ns_per_bit_p = (clk_per_bit_p * CLOCK_PERIOD_NS);
 
-  parameter reset_clks_p = 16384+2;
+  parameter reset_clks_p = 1024;
 
   parameter nbf_addr_width_p = 40;
   parameter nbf_data_width_p = 64;
@@ -33,14 +33,14 @@ module fpga_host_testbench
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
-  bit clk = 1'b0;
+  bit clk = 1'b1;
   bit reset = 1'b1;
   always #(CLOCK_PERIOD_NS/2) begin
       clk = ~clk;
   end
   
   initial begin
-      #(reset_clks_p);
+      #(reset_clks_p*CLOCK_PERDIO_NS);
       reset = 1'b0;
   end
     
@@ -122,10 +122,9 @@ module fpga_host_testbench
         wait(tx_ready_and_lo == 1'b1);
         tx_v_li = 1'b1;
         #(CLOCK_PERIOD_NS);
-        #(CLOCK_PERIOD_NS/2);
         tx_v_li = 1'b0;
         tx_data_li = '0;
-        #(CLOCK_PERIOD_NS/2);
+        #(CLOCK_PERIOD_NS);
       end
     endtask
     
@@ -145,8 +144,13 @@ module fpga_host_testbench
         tx_data_li = '0;
         nbf_in = '0;
         nbf_in.opcode = e_fpga_host_nbf_finish;
-        #(reset_clks_p * 2);
-        // send LSB->MSB
+        // wait until reset done
+        @(negedge reset);
+        // wait another chunk of clocks doing nothing
+        @(posedge clk);
+        #(reset_clks_p*CLOCK_PERDIO_NS);
+        
+        // send NBF packets
         for (ii = 0; ii < test_packets_p; ii = ii+1) begin
             send_nbf(nbf_in);
             read_nbf(nbf_out);
