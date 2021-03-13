@@ -15,7 +15,7 @@ module fpga_host_testbench
   localparam clk_per_bit_p = (clk_freq_hz / BAUD_RATE); // 10416 at 100MHz, 9600 Baud
   localparam ns_per_bit_p = (clk_per_bit_p * CLOCK_PERIOD_NS);
 
-  parameter reset_clks_p = 1024;
+  parameter reset_clks_p = 64;
 
   parameter nbf_addr_width_p = 40;
   parameter nbf_data_width_p = 64;
@@ -33,17 +33,23 @@ module fpga_host_testbench
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
-  bit clk = 1'b1;
-  bit reset = 1'b1;
-  always #(CLOCK_PERIOD_NS/2) begin
-      clk = ~clk;
-  end
-  
-  initial begin
-      #(reset_clks_p*CLOCK_PERDIO_NS);
-      reset = 1'b0;
-  end
+  logic clk, reset;
+
+  bsg_nonsynth_clock_gen
+   #(.cycle_time_p(CLOCK_PERIOD_NS))
+   clock_gen
+    (.o(clk));
     
+  bsg_nonsynth_reset_gen
+   #(.num_clocks_p(1)
+     ,.reset_cycles_lo_p(0)
+     ,.reset_cycles_hi_p(reset_clks_p)
+     )
+    reset_gen
+     (.clk_i(clk)
+      ,.async_reset_o(reset)
+      );
+  
   // module signals
   logic tx_lo, rx_li; 
   logic reset_lo, error_lo;
@@ -148,7 +154,7 @@ module fpga_host_testbench
         @(negedge reset);
         // wait another chunk of clocks doing nothing
         @(posedge clk);
-        #(reset_clks_p*CLOCK_PERDIO_NS);
+        #(reset_clks_p*CLOCK_PERIOD_NS);
         
         // send NBF packets
         for (ii = 0; ii < test_packets_p; ii = ii+1) begin

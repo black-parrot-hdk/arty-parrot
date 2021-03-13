@@ -22,10 +22,7 @@ module fpga_host_system
   
     , parameter io_in_nbf_buffer_els_p = 4
     , parameter io_out_nbf_buffer_els_p = 4
-    
-    , localparam reset_cycles_lp = 16384
-    , localparam reset_cnt_width_lp = `BSG_SAFE_CLOG2(reset_cycles_lp)
-    
+
     , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
     
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
@@ -141,6 +138,15 @@ module fpga_host_system
   logic error_lo;
   bp_fpga_host
    #(.bp_params_p(e_bp_default_cfg)
+     ,.nbf_addr_width_p(nbf_addr_width_p)
+     ,.nbf_data_width_p(nbf_data_width_p)
+     ,.uart_clk_per_bit_p(uart_clk_per_bit_p)
+     ,.uart_data_bits_p(uart_data_bits_p)
+     ,.uart_parity_bit_p(uart_parity_bit_p)
+     ,.uart_parity_odd_p(uart_parity_odd_p)
+     ,.uart_stop_bits_p(uart_stop_bits_p)
+     ,.io_in_nbf_buffer_els_p(io_in_nbf_buffer_els_p)
+     ,.io_out_nbf_buffer_els_p(io_out_nbf_buffer_els_p)
      )
     fpga_host
      (.clk_i(sys_clk_i)
