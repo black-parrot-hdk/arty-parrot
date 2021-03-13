@@ -132,7 +132,7 @@ module fpga_host_system
       ,.data_i(io_cmd_lo)
       // return to FPGA host
       ,.v_o(io_resp_v_li)
-      ,.yumi_i(io_resp_v_li & io_resp_ready_and_lo);
+      ,.yumi_i(io_resp_v_li & io_resp_ready_and_lo)
       ,.data_o(io_resp_li)
       );
   assign io_cmd_yumi_li = io_cmd_v_lo & loopback_ready_and_lo;
