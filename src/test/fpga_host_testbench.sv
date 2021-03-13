@@ -145,9 +145,11 @@ module fpga_host_testbench
     
     integer ii = 0;
     bp_fpga_host_nbf_s nbf_in, nbf_out;
+    logic [7:0] data;
     initial begin
         tx_v_li = '0;
         tx_data_li = '0;
+        data = '0;
         nbf_in = '0;
         nbf_in.opcode = e_fpga_host_nbf_finish;
         // wait until reset done
@@ -155,14 +157,81 @@ module fpga_host_testbench
         // wait another chunk of clocks doing nothing
         @(posedge clk);
         #(reset_clks_p*CLOCK_PERIOD_NS);
-        
+
+        nbf_in.opcode = e_fpga_host_nbf_fence;
+        send_nbf(nbf_in);
+        read_nbf(nbf_out);
+        assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+        #(CLOCK_PERIOD_NS);
+
+        #(CLOCK_PERIOD_NS);
+        data = '0;
+        nbf_in = '0;
+        nbf_in.opcode = e_fpga_host_nbf_write_8;
+        // send NBF packets
+        for (ii = 0; ii < test_packets_p; ii = ii+1) begin
+            nbf_in.data[0+:8] = data;
+            send_nbf(nbf_in);
+            read_nbf(nbf_out);
+            assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+            data = data + 'd1;
+            #(CLOCK_PERIOD_NS);
+        end
+
+        #(CLOCK_PERIOD_NS);
+        data = '0;
+        nbf_in = '0;
+        nbf_in.opcode = e_fpga_host_nbf_write_4;
+        // send NBF packets
+        for (ii = 0; ii < test_packets_p; ii = ii+1) begin
+            nbf_in.data[0+:8] = data;
+            send_nbf(nbf_in);
+            read_nbf(nbf_out);
+            assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+            data = data + 'd1;
+            #(CLOCK_PERIOD_NS);
+        end
+
+        #(CLOCK_PERIOD_NS);
+        data = '0;
+        nbf_in = '0;
+        nbf_in.opcode = e_fpga_host_nbf_read_8;
         // send NBF packets
         for (ii = 0; ii < test_packets_p; ii = ii+1) begin
             send_nbf(nbf_in);
             read_nbf(nbf_out);
-            assert(nbf_out == nbf_in) else $error("Data mismatch!");
+            assert(nbf_out == nbf_in) else $error("NBF mismatch!");
             #(CLOCK_PERIOD_NS);
         end
+
+
+        #(CLOCK_PERIOD_NS);
+        data = '0;
+        nbf_in = '0;
+        nbf_in.opcode = e_fpga_host_nbf_write_8;
+        // send NBF packets
+        for (ii = 0; ii < test_packets_p; ii = ii+1) begin
+            send_nbf(nbf_in);
+            read_nbf(nbf_out);
+            assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+            #(CLOCK_PERIOD_NS);
+        end
+
+        #(CLOCK_PERIOD_NS);
+        nbf_in = '0;
+        nbf_in.opcode = e_fpga_host_nbf_fence;
+        send_nbf(nbf_in);
+        read_nbf(nbf_out);
+        assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+        #(CLOCK_PERIOD_NS);
+
+        #(CLOCK_PERIOD_NS);
+        nbf_in.opcode = e_fpga_host_nbf_finish;
+        send_nbf(nbf_in);
+        read_nbf(nbf_out);
+        assert(nbf_out == nbf_in) else $error("NBF mismatch!");
+        #(CLOCK_PERIOD_NS);
+
         $display("Test PASSed");
         $finish;
     end

@@ -50,7 +50,7 @@ module fpga_host_system
   bp_bedrock_io_mem_msg_s io_cmd_lo, io_resp_li;
   logic io_cmd_v_lo, io_cmd_yumi_li;
   logic io_resp_v_li, io_resp_ready_and_lo;
-  bp_bedrock_io_mem_payload_s io_cmd_lo_payload, io_resp_li_payload;
+  bp_bedrock_io_mem_payload_s io_cmd_lo_payload;
   assign io_cmd_lo_payload = io_cmd_lo.header.payload;
   
   logic [7:0] cmd_data_byte_r, cmd_data_byte_n;
@@ -84,25 +84,9 @@ module fpga_host_system
     io_cmd_li_payload = '0;
     io_resp_yumi_li = '0;
     
-    // from FPGA Host to BP
-    io_resp_li = '0;
-    io_resp_v_li = '0;
-    io_resp_li_payload = '0;
-    io_cmd_yumi_li = '0;
-    
     cmd_data_byte_n = cmd_data_byte_r;
     resp_data_byte_n = resp_data_byte_r;
     send_state_n = send_state_r;
-    
-    // from FPGA Host to BP
-    if (io_cmd_v_lo) begin
-      io_resp_li = io_cmd_lo;
-      if (io_cmd_lo.header.msg_type.mem == e_bedrock_mem_uc_rd) begin
-        io_resp_li.data[0+:8] = resp_data_byte_r;
-      end
-      io_resp_v_li = 1'b1;
-      io_cmd_yumi_li = io_cmd_v_lo & io_resp_ready_and_lo;
-    end
     
     // from BP to FPGA Host
     unique case (send_state_r)
@@ -135,6 +119,23 @@ module fpga_host_system
       end
     endcase
   end
+
+  logic loopback_ready_and_lo;
+  bsg_two_fifo
+   #(.width_p($bits(bp_bedrock_io_mem_msg_s)))
+    cmd_resp_loopback
+     (.clk_i(sys_clk_i)
+      ,.reset_i(reset_li)
+      // from FPGA host
+      ,.v_i(io_cmd_v_lo)
+      ,.ready_o(loopback_ready_and_lo)
+      ,.data_i(io_cmd_lo)
+      // return to FPGA host
+      ,.v_o(io_resp_v_li)
+      ,.yumi_i(io_resp_v_li & io_resp_ready_and_lo);
+      ,.data_o(io_resp_li)
+      );
+  assign io_cmd_yumi_li = io_cmd_v_lo & loopback_ready_and_lo;
   
   logic error_lo;
   bp_fpga_host
@@ -164,10 +165,12 @@ module fpga_host_system
       ,.io_cmd_v_o(io_cmd_v_lo)
       ,.io_cmd_yumi_i(io_cmd_yumi_li)
       ,.io_resp_i(io_resp_li)
-      ,.io_resp_v_i(io_rsp_v_li)
+      ,.io_resp_v_i(io_resp_v_li)
       ,.io_resp_ready_and_o(io_resp_ready_and_lo)
+      // UART
       ,.rx_i(rx_i)
       ,.tx_o(tx_o)
+      // UART error
       ,.error_o(error_lo)
       );
 
