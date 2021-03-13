@@ -165,7 +165,7 @@ def writeNBF(args, nbf_hex):
     (opcode, addr, data) = splitNBF(args, nbf_hex)
     nbf_bytes = encodeNBF(nbf_hex)
     bytes_written = len(nbf_bytes)
-    print('SEND: {0}'.format(nbf_hex))
+    print('SEND:  {0}'.format(nbf_hex.strip()))
     sp.write(nbf_bytes)
     if (nbfHasResponse(opcode)):
       (opcode_in, addr_in, data_in) = readNBF(args)
@@ -208,7 +208,7 @@ def listenNBF(args):
     # sleep for a second
     else:
       timeout_cnt += 1
-      sleep(1)
+      time.sleep(1)
 
     if timeout_cnt > args.nbf_listen_timeout:
       resp = input('$ Continue executing (y/n)? ')
@@ -221,6 +221,7 @@ def listenNBF(args):
 # NBF mode entry
 def runNBF(args):
   sendNBF(args)
+  listenNBF(args)
 
 ## Main
 if __name__ == '__main__':
@@ -235,5 +236,6 @@ if __name__ == '__main__':
       interactiveHex(args)
     elif args.mode == 'nbf':
       runNBF(args)
-  except:
+  except Exception as e:
     print("caught an exception, closing")
+    print(e)
