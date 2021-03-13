@@ -102,10 +102,10 @@ def readNBF():
   print('NBF: {0}_{1}_{2}'.format(opcode, addr, data))
 
 def nbfHasResponse(nbf_bytes):
-  resp_ops = [b'\xff', b'\xfe', b'\x02', b'\x03']
+  resp_ops = [254, 255, 2, 3, 18, 19]
   return (nbf_bytes[0] in resp_ops)
 
-def sendNBF(args):
+def runNBF(args):
   # process input file as BlackParrot NBF format
   # each line of nbf file is hex characters
   # underscores may be present to separate hex
@@ -120,8 +120,6 @@ def sendNBF(args):
         if (nbfHasResponse(line_bytes)):
           readNBF()
     print('wrote {0} bytes from nbf'.format(bytes_written))
-    while (True):
-      readNBF()
   except:
     print('failed to transfer nbf file')
     if not sp is None and sp.is_open:
