@@ -1,34 +1,69 @@
+`include "bsg_defines.v"
+
+// implemented from diagram at: https://www.digikey.com/eewiki/pages/viewpage.action?pageId=13599139
+
 module debounce
-  (input                  clk_i
-   , input                button_i
-   , output logic         pressed_o // 1 if button_i is pressed
-   , output logic         down_o
-   , output logic         up_o
+  #(parameter width_p = 11
+    , localparam max_cnt_lp = (1 << width_p)
+    , localparam ptr_width_lp = `BSG_SAFE_CLOG2(max_cnt_lp+1)
+    )
+  (input   clk_i
+   , input reset_i
+   , input button_i
+   , output logic debounce_o
    );
 
-logic b0 = '0;
-logic b1 = '0;
-always @(posedge clk_i) begin
-  b0 <= ~button_i;
-  b1 <= b0;
-end
+  logic dff1_lo, dff2_lo;
+  logic cnt_clear, cnt_up;
+  logic [ptr_width_lp-1:0] cnt_lo;
+  logic db_li;
+  assign cnt_clear = dff1_lo ^ dff2_lo;
+  assign cnt_up = ~(cnt_lo[width_p-1]) & ~cnt_clear;
+  assign db_li = (cnt_lo[width_p-1] == 1'b1) ? dff2_lo : debounce_o;
 
-logic [15:0] cnt = '0;
-logic pressed = '0;
-assign pressed_o = pressed;
-wire idle = (pressed_o == b1);
-wire cnt_max = &cnt;
+  bsg_dff_reset
+   #(.width_p(1)
+     ,.reset_val_p(0)
+     )
+   dff1
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.data_i(button_i)
+     ,.data_o(dff1_lo)
+     );
 
-always @(posedge clk_i) begin
-  if (idle) begin
-    cnt <= '0;
-  end else begin
-    cnt <= cnt + 'd1;
-    if (cnt_max) pressed <= ~pressed;
-  end
-end
+  bsg_dff_reset
+   #(.width_p(1)
+     ,.reset_val_p(0)
+     )
+   dff2
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.data_i(dff1_lo)
+     ,.data_o(dff2_lo)
+     );
 
-assign down_o = ~idle & cnt_max & ~pressed;
-assign up_o   = ~idle & cnt_max & pressed;
+  bsg_dff_reset
+   #(.width_p(1)
+     ,.reset_val_p(0)
+     )
+   debounce_out
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.data_i(db_li)
+     ,.data_o(debounce_o)
+     );
+
+  bsg_counter_clear_up
+   #(.max_val_p(max_cnt_lp)
+     ,.init_val_p(0)
+     )
+   debounce_counter
+    (.clk_i(clk_i)
+     ,.reset_i(reset_i)
+     ,.clear_i(cnt_clear)
+     ,.up_i(cnt_up)
+     ,.count_o(cnt_lo)
+     );
 
 endmodule
