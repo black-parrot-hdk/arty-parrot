@@ -2,14 +2,14 @@
 
 module debounce_new
   #(parameter width_p = 11
-    , localparam max_cnt_lp = (1 << (width_p-1))
-    , localparam ptr_width_lp = `BSG_SAFE_CLOG2(max_cnt_lp)
+    , localparam max_cnt_lp = (1 << width_p)
+    , localparam ptr_width_lp = `BSG_SAFE_CLOG2(max_cnt_lp+1)
     )
   (input   clk_i
    , input reset_i
    , input button_i
    , output logic debounce_o
-   )
+   );
 
   logic dff1_lo, dff2_lo;
   logic cnt_clear, cnt_up;
