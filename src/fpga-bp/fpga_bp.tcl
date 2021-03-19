@@ -55,17 +55,6 @@ if { $::argc > 0 } {
   }
 }
 
-# Check for paths and files needed for project creation
-set validate_required 0
-if { $validate_required } {
-  if { [checkRequiredFiles $blackparrot_dir $arty_dir] } {
-    puts "Tcl file $script_file is valid. All files required for project creation is accesable. "
-  } else {
-    puts "Tcl file $script_file is not valid. Not all files required for project creation is accesable. "
-    return
-  }
-}
-
 # Create project
 create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7a100tcsg324-1
 
@@ -74,6 +63,7 @@ set proj_dir [get_property directory [current_project]]
 
 # Set project properties
 set obj [current_project]
+set_property -name "board_part_repo_paths" -value [file normalize "$arty_dir/common/board_files"] -objects $obj
 set_property -name "board_part" -value "digilentinc.com:arty-a7-100:part0:1.0" -objects $obj
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
 set_property -name "enable_vhdl_2008" -value "1" -objects $obj
@@ -87,6 +77,52 @@ set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "source_mgmt_mode" -value "DisplayOnly" -objects $obj
 set_property -name "webtalk.xsim_launch_sim" -value "48" -objects $obj
 
+# Discover source files
+
+# reads the top-level flist and returns a 2-element list: [list $include_dirs $source_files]
+proc load_sources_from_flist { blackparrot_dir } {
+  # Set include vars used in flists
+  set BP_TOP_DIR "$blackparrot_dir/bp_top/"
+  set BP_COMMON_DIR "$blackparrot_dir/bp_common/"
+  set BP_BE_DIR "$blackparrot_dir/bp_be/"
+  set BP_FE_DIR "$blackparrot_dir/bp_fe/"
+  set BP_ME_DIR "$blackparrot_dir/bp_me/"
+  set BASEJUMP_STL_DIR "$blackparrot_dir/external/basejump_stl/"
+  set HARDFLOAT_DIR "$blackparrot_dir/external/HardFloat/"
+
+  set flist_path "$blackparrot_dir/bp_top/syn/flist.vcs"
+
+  set f [split [string trim [read [open $flist_path r]]] "\n"]
+  set source_files [list ]
+  set include_dirs [list ]
+  foreach x $f {
+    if {![string match "" $x] && ![string match "#" [string index $x 0]]} {
+      # If the item starts with +incdir+, directory files need to be added
+      if {[string match "+" [string index $x 0]]} {
+        set trimchars "+incdir+"
+        set temp [string trimleft $x $trimchars]
+        set expanded [subst $temp]
+        lappend include_dirs $expanded
+      # } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit.v" $x]} {
+      #   # bitmasked memories are incorrectly inferred in Kintex 7 and Ultrascale+ FPGAs, this version maps into lutram correctly
+      #   set replace_hard "$BASEJUMP_STL_DIR/hard/ultrascale_plus/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.v"
+      #   set expanded [subst $replace_hard]
+      #   lappend flist $expanded
+      #   puts $expanded
+      } else {
+        set expanded [subst $x]
+        set normalized [file normalize $expanded]
+        lappend source_files $normalized
+      }
+    }
+  }
+
+  list $include_dirs $source_files
+}
+
+lassign [load_sources_from_flist $blackparrot_dir] flist_include_dirs flist_source_files
+set_property include_dirs $flist_include_dirs [current_fileset]
+
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
   create_fileset -srcset sources_1
@@ -94,350 +130,13 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
-set files [list \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_defines.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_noc/bsg_wormhole_router.vh"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_noc/bsg_noc_links.vh"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_wormhole_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_cce_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_cce_inst_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_cce_inst_pkgdef.svh"] \
- [file normalize "${arty_dir}/src/include/bp_fpga_host_pkgdef.svh"] \
- [file normalize "${arty_dir}/src/include/bp_fpga_host_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_instr_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_csr_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_log_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_core_if.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_cache_engine_if.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_addr_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_bedrock_if.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_cfg_bus_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_core_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_cfg_bus_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_cache_engine_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_bedrock_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_aviary_defines.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_addr_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_aviary_pkgdef.svh"] \
- [file normalize "${blackparrot_dir}/bp_common/src/include/bp_common_pkg.sv"] \
- [file normalize "${blackparrot_dir}/bp_me/src/include/bp_me_pkg.sv"] \
- [file normalize "${arty_dir}/src/include/bp_fpga_host_pkg.sv"] \
- [file normalize "${arty_dir}/src/v/bp_fpga_host.sv"] \
- [file normalize "${arty_dir}/src/v/bp_fpga_host_io_in.sv"] \
- [file normalize "${arty_dir}/src/v/bp_fpga_host_io_out.sv"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_array_reverse.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_circular_ptr.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_clkgate_optional.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_counter_clear_up_one_hot.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_counter_up_down.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_dff_en.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_dlatch.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small_hardened.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small_unhardened.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_tracker.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_flow_counter.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_sync.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_sync_synth.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_synth.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_mux_one_hot.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_parallel_in_serial_out_passthrough.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_serial_in_parallel_out_passthrough.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_two_fifo.v"] \
- [file normalize "${arty_dir}/src/v/uart_rx.sv"] \
- [file normalize "${arty_dir}/src/v/uart_tx.sv"] \
- [file normalize "${arty_dir}/src/test/fpga_host_system.sv"] \
-]
-add_files -norecurse -fileset $obj $files
+add_files -norecurse -fileset $obj $flist_source_files
 
 # Set 'sources_1' fileset file properties for remote files
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_defines.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-set_property -name "is_global_include" -value "1" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_noc/bsg_wormhole_router.vh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-set_property -name "is_global_include" -value "1" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_noc/bsg_noc_links.vh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-set_property -name "is_global_include" -value "1" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_wormhole_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_cce_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_cce_inst_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_cce_inst_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${arty_dir}/src/include/bp_fpga_host_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${arty_dir}/src/include/bp_fpga_host_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_instr_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_rv64_csr_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_log_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_core_if.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_cache_engine_if.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_addr_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_bedrock_if.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_cfg_bus_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_core_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_cfg_bus_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_cache_engine_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_bedrock_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_aviary_defines.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_addr_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_aviary_pkgdef.svh"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "Verilog Header" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_common/src/include/bp_common_pkg.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/bp_me/src/include/bp_me_pkg.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/include/bp_fpga_host_pkg.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/v/bp_fpga_host.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/v/bp_fpga_host_io_in.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/v/bp_fpga_host_io_out.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_array_reverse.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_circular_ptr.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_clkgate_optional.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_counter_clear_up_one_hot.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_counter_up_down.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_dff_en.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_dlatch.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small_hardened.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_1r1w_small_unhardened.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_fifo_tracker.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_flow_counter.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_sync.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_sync_synth.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_mem/bsg_mem_1r1w_synth.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_misc/bsg_mux_one_hot.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_parallel_in_serial_out_passthrough.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_serial_in_parallel_out_passthrough.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_dataflow/bsg_two_fifo.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/v/uart_rx.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/v/uart_tx.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${arty_dir}/src/test/fpga_host_system.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
+foreach source_file $flist_source_files {
+  set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$source_file"]]
+  set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+}
 
 # Set 'sources_1' fileset file properties for local files
 # None
@@ -474,14 +173,14 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- [file normalize "${arty_dir}/src/test/fpga_bpbench.sv"] \
+ [file normalize "${arty_dir}/src/test/fpga_host_testbench.sv"] \
  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset file properties for remote files
-set file "${arty_dir}/src/test/fpga_bpbench.sv"
+set file "${arty_dir}/src/test/fpga_host_testbench.sv"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
