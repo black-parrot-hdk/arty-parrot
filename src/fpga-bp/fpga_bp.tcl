@@ -131,11 +131,25 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 add_files -norecurse -fileset $obj $flist_source_files
+add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_a.prj" ]
+add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_7series_0.xci" ]
 
 # Set 'sources_1' fileset file properties for remote files
 foreach source_file $flist_source_files {
   set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$source_file"]]
   set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+}
+
+set file [file normalize "${arty_dir}src/fpga-bp/mig/mig_a.prj" ]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
+set_property -name "scoped_to_cells" -value "mig_7series_0" -objects $file_obj
+
+set file [file normalize "${arty_dir}src/fpga-bp/mig/mig_7series_0.xci" ]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
+set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
+set_property -name "registered_with_manager" -value "1" -objects $file_obj
+if { ![get_property "is_locked" $file_obj] } {
+  set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
 }
 
 # Set 'sources_1' fileset file properties for local files
