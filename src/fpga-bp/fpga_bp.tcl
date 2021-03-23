@@ -74,7 +74,9 @@ set_property -name "platform.board_id" -value "arty-a7-100" -objects $obj
 set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_user_files" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
-set_property -name "source_mgmt_mode" -value "DisplayOnly" -objects $obj
+# Loading the "source hierarchy" requires a huge amount of RAM and time.
+# "None" disables this. "DisplayOnly" is the default.
+set_property -name "source_mgmt_mode" -value "None" -objects $obj
 set_property -name "webtalk.xsim_launch_sim" -value "48" -objects $obj
 
 # Discover source files
