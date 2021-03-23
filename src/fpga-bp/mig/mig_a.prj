@@ -23,9 +23,9 @@
 
   <Version>4.2</Version>
 
-  <SystemClock>No Buffer</SystemClock>
+  <SystemClock>Single-Ended</SystemClock>
 
-  <ReferenceClock>No Buffer</ReferenceClock>
+  <ReferenceClock>Single-Ended</ReferenceClock>
 
   <SysResetPolarity>ACTIVE LOW</SysResetPolarity>
 
@@ -36,6 +36,18 @@
   <dci_hr_inouts_inputs>50 Ohms</dci_hr_inouts_inputs>
 
   <dci_cascade>0</dci_cascade>
+
+  <FPGADevice>
+    <selected>7a/xc7a35t-csg324</selected>
+    <selected>7a/xc7a50t-csg324</selected>
+    <selected>7a/xc7a75t-csg324</selected>
+    <selected>7a/xc7a15t-csg324</selected>
+    <selected>7a/xc7a15ti-csg324</selected>
+    <selected>7a/xc7a35ti-csg324</selected>
+    <selected>7a/xc7a50ti-csg324</selected>
+    <selected>7a/xc7a75ti-csg324</selected>
+    <selected>7a/xc7a100ti-csg324</selected>
+  </FPGADevice>
 
   <Controller number="0">
     <MemoryDevice>DDR3_SDRAM/Components/MT41K128M16XX-15E</MemoryDevice>
@@ -113,10 +125,16 @@
       <Pin IN_TERM="" IOSTANDARD="SSTL135" PADName="K6" SLEW="" VCCAUX_IO="" name="ddr3_reset_n"/>
       <Pin IN_TERM="" IOSTANDARD="SSTL135" PADName="P5" SLEW="" VCCAUX_IO="" name="ddr3_we_n"/>
     </PinSelection>
+    <Reference_Clock>
+      <Pin Bank="35" PADName="E2(SRCC_P)" name="clk_ref_i"/>
+    </Reference_Clock>
+    <System_Clock>
+      <Pin Bank="35" PADName="D5(SRCC_P)" name="sys_clk_i"/>
+    </System_Clock>
     <System_Control>
-      <Pin Bank="Select Bank" PADName="No connect" name="sys_rst"/>
-      <Pin Bank="Select Bank" PADName="No connect" name="init_calib_complete"/>
-      <Pin Bank="Select Bank" PADName="No connect" name="tg_compare_error"/>
+      <Pin Bank="35" PADName="A3" name="sys_rst"/>
+      <Pin Bank="35" PADName="A4" name="init_calib_complete"/>
+      <Pin Bank="35" PADName="B2" name="tg_compare_error"/>
     </System_Control>
     <TimingParameters>
       <Parameters tcke="5.625" tfaw="45" tras="36" trcd="13.5" trefi="7.8" trfc="160" trp="13.5" trrd="7.5" trtp="7.5" twtr="7.5"/>
