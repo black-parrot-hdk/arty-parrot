@@ -123,7 +123,20 @@ proc load_sources_from_flist { blackparrot_dir } {
 }
 
 lassign [load_sources_from_flist $blackparrot_dir] flist_include_dirs flist_source_files
-set_property include_dirs $flist_include_dirs [current_fileset]
+# TODO: replace below with external flist file
+set additional_include_dirs [list \
+  [file normalize "${arty_dir}/src/include/" ] \
+]
+set additional_source_files [list \
+  [file normalize "${arty_dir}/src/v/wrapper.sv" ] \
+  [file normalize "${arty_dir}/src/v/ram.sv" ] \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
+]
+
+set all_include_dirs [concat $flist_include_dirs $additional_include_dirs]
+set_property include_dirs $all_include_dirs [current_fileset]
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -132,12 +145,13 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
-add_files -norecurse -fileset $obj $flist_source_files
+add_files -norecurse -scan_for_includes -fileset $obj $flist_source_files
+add_files -norecurse -scan_for_includes -fileset $obj $additional_source_files
 add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_a.prj" ]
 add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_7series_0.xci" ]
 
 # Set 'sources_1' fileset file properties for remote files
-foreach source_file $flist_source_files {
+foreach source_file [concat $flist_source_files $additional_source_files] {
   set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$source_file"]]
   set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 }
@@ -159,7 +173,7 @@ if { ![get_property "is_locked" $file_obj] } {
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "fpga_host_system" -objects $obj
+set_property -name "top" -value "wrapper" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
@@ -171,9 +185,9 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${arty_dir}/src/fpga-host/xdc/constraints.xdc]"
+set file "[file normalize ${arty_dir}/src/fpga-bp/xdc/constraints.xdc]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
-set file "${arty_dir}/src/fpga-host/xdc/constraints.xdc"
+set file "${arty_dir}/src/fpga-bp/xdc/constraints.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
