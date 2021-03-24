@@ -37,7 +37,7 @@ module wrapper
     logic                        dram_dma_data_v_li;
     logic                        dram_dma_data_yumi_lo;
 
-    ram
+    mig_ddr3_ram
         #(.bp_params_p(bp_params_p))
         dram
         (.clk_o(clock)

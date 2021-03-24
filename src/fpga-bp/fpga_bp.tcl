@@ -129,7 +129,7 @@ set additional_include_dirs [list \
 ]
 set additional_source_files [list \
   [file normalize "${arty_dir}/src/v/wrapper.sv" ] \
-  [file normalize "${arty_dir}/src/v/ram.sv" ] \
+  [file normalize "${arty_dir}/src/v/mig_ddr3_ram.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
