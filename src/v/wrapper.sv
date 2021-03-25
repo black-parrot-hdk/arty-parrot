@@ -73,17 +73,17 @@ module wrapper
          ,.sys_rst      (sys_rst)
 
          // BP core memory interface
-         ,.dma_pkt_i            (dma_pkt_i)
-         ,.dma_pkt_v_i          (dma_pkt_v_i)
-         ,.dma_pkt_yumi_o       (dma_pkt_yumi_o)
+         ,.dma_pkt_i            (dram_dma_pkt_li)
+         ,.dma_pkt_v_i          (dram_dma_pkt_v_li)
+         ,.dma_pkt_yumi_o       (dram_dma_pkt_yumi_lo)
 
-         ,.dma_data_o           (dma_data_o)
-         ,.dma_data_v_o         (dma_data_v_o)
-         ,.dma_data_ready_and_i (dma_data_ready_and_i)
+         ,.dma_data_o           (dram_dma_data_lo)
+         ,.dma_data_v_o         (dram_dma_data_v_lo)
+         ,.dma_data_ready_and_i (dram_dma_data_ready_and_li)
 
-         ,.dma_data_i           (dma_data_i)
-         ,.dma_data_v_i         (dma_data_v_i)
-         ,.dma_data_yumi_o      (dma_data_yumi_o)
+         ,.dma_data_i           (dram_dma_data_li)
+         ,.dma_data_v_i         (dram_dma_data_v_li)
+         ,.dma_data_yumi_o      (dram_dma_data_yumi_lo)
          );
 
 endmodule

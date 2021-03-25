@@ -1,4 +1,6 @@
 `include "bp_fpga_wrapper_interface.svh"
+`include "bp_common_defines.svh"
+`include "bp_common_aviary_defines.svh"
 
 module mig_ddr3_ram
     import bp_common_pkg::*;
@@ -32,7 +34,7 @@ module mig_ddr3_ram
     // The below must match parameters provided to MIG
     localparam axi_id_width_p = 4;
     localparam axi_addr_width_p = 64;
-    localparam axi_data_width_p = 512;
+    localparam axi_data_width_p = 128;
     localparam axi_burst_len_p = 1;
 
     // ACTIVE-LOW reset for memory interface
@@ -44,42 +46,42 @@ module mig_ddr3_ram
     // "Application interface" (non-AXI mode) signals we ignore
     logic mmcm_locked_lo, app_sr_active_lo, app_ref_ack_lo, app_zq_ack_lo;
 
-    logic axi_awid_li;
-    logic axi_awaddr_li;
-    logic axi_awlen_li;
-    logic axi_awsize_li;
-    logic axi_awburst_li;
-    logic axi_awlock_li;
-    logic axi_awcache_li;
-    logic axi_awprot_li;
+    logic [3:0]  axi_awid_li;
+    logic [27:0] axi_awaddr_li;
+    logic [7:0]  axi_awlen_li;
+    logic [2:0]  axi_awsize_li;
+    logic [1:0]  axi_awburst_li;
+    logic [0:0]  axi_awlock_li;
+    logic [3:0]  axi_awcache_li;
+    logic [2:0]  axi_awprot_li;
     logic axi_awvalid_li;
     logic axi_awready_lo;
 
-    logic axi_wdata_li;
-    logic axi_wstrb_li;
+    logic [127:0] axi_wdata_li;
+    logic [15:0]  axi_wstrb_li;
     logic axi_wlast_li;
     logic axi_wvalid_li;
     logic axi_wready_lo;
 
-    logic axi_bid_lo;
-    logic axi_bresp_lo;
+    logic [3:0] axi_bid_lo;
+    logic [1:0] axi_bresp_lo;
     logic axi_bvalid_lo;
     logic axi_bready_li;
 
-    logic axi_arid_li;
-    logic axi_araddr_li;
-    logic axi_arlen_li;
-    logic axi_arsize_li;
-    logic axi_arburst_li;
-    logic axi_arlock_li;
-    logic axi_arcache_li;
-    logic axi_arprot_li;
+    logic [3:0]  axi_arid_li;
+    logic [27:0] axi_araddr_li;
+    logic [7:0]  axi_arlen_li;
+    logic [2:0]  axi_arsize_li;
+    logic [1:0]  axi_arburst_li;
+    logic [0:0]  axi_arlock_li;
+    logic [3:0]  axi_arcache_li;
+    logic [2:0]  axi_arprot_li;
     logic axi_arvalid_li;
     logic axi_arready_lo;
 
-    logic axi_rid_lo;
-    logic axi_rdata_lo;
-    logic axi_rresp_lo;
+    logic [3:0]   axi_rid_lo;
+    logic [127:0] axi_rdata_lo;
+    logic [1:0]   axi_rresp_lo;
     logic axi_rlast_lo;
     logic axi_rvalid_lo;
     logic axi_rready_li;
@@ -196,8 +198,8 @@ module mig_ddr3_ram
           ,.axi_burst_len_p      (axi_burst_len_p)
           )
         cache_to_axi 
-        (.clk_i  (mig_clk)
-         ,.reset_i(mig_reset)
+        (.clk_i  (clk_o)
+         ,.reset_i(rst_o)
 
          ,.dma_pkt_i       (dma_pkt_i)
          ,.dma_pkt_v_i     (dma_pkt_v_i)
@@ -205,7 +207,7 @@ module mig_ddr3_ram
 
          ,.dma_data_o      (dma_data_o)
          ,.dma_data_v_o    (dma_data_v_o)
-         ,.dma_data_ready_i(dma_data_ready_i)
+         ,.dma_data_ready_i(dma_data_ready_and_i)
 
          ,.dma_data_i      (dma_data_i)
          ,.dma_data_v_i    (dma_data_v_i)

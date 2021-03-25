@@ -202,32 +202,27 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
-set files [list \
- [file normalize "${arty_dir}/src/test/fpga_host_testbench.sv"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
- [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
+set sim_include_dirs [list \
+  [file normalize "${arty_dir}/src/external"] \
 ]
-add_files -norecurse -fileset $obj $files
+set sim_source_files [list \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
+  [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
+  [file normalize "${arty_dir}/src/external/ddr3_model.sv"] \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
+  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
+]
+set_property include_dirs [concat $sim_include_dirs $all_include_dirs] $obj
+add_files -norecurse -scan_for_includes -fileset $obj $sim_source_files
 
 # Set 'sim_1' fileset file properties for remote files
-set file "${arty_dir}/src/test/fpga_host_testbench.sv"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-set_property -name "used_in" -value "simulation" -objects $file_obj
-set_property -name "used_in_implementation" -value "0" -objects $file_obj
-set_property -name "used_in_synthesis" -value "0" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
-set file "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-
+foreach source_file $sim_source_files {
+  set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$source_file"]]
+  set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+  set_property -name "used_in" -value "simulation" -objects $file_obj
+  set_property -name "used_in_implementation" -value "0" -objects $file_obj
+  set_property -name "used_in_synthesis" -value "0" -objects $file_obj
+}
 
 # Set 'sim_1' fileset file properties for local files
 # None
@@ -235,7 +230,7 @@ set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "fpga_bpbench" -objects $obj
+set_property -name "top" -value "mig_ddr3_ram_testbench" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
