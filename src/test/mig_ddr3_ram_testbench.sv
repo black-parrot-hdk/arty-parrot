@@ -1,4 +1,4 @@
-`timescale 1ps / 1ps
+`timescale 1ns / 1ps
 
 `include "bp_common_defines.svh"
 `include "bp_common_aviary_defines.svh"
@@ -55,7 +55,7 @@ module mig_ddr3_ram_testbench
 
     // Clock and active-low reset which drive the memory controller
     bsg_nonsynth_clock_gen
-    #(.cycle_time_p(SYS_CLOCK_PERIOD_NS))
+    #(.cycle_time_p(SYS_CLOCK_PERIOD_NS*1000 /* picoseconds */))
     clock_gen
         (.o(sys_clk_i));
 
@@ -65,13 +65,13 @@ module mig_ddr3_ram_testbench
     bit sys_rst_active_high;
     assign sys_rst = !sys_rst_active_high;
     bsg_nonsynth_reset_gen
-    #(.num_clocks_p(1)
-        ,.reset_cycles_lo_p(0)
-        ,.reset_cycles_hi_p(reset_clks_p)
+        #(.num_clocks_p(1)
+          ,.reset_cycles_lo_p(0)
+          ,.reset_cycles_hi_p(reset_clks_p)
         )
         reset_gen
         (.clk_i(sys_clk_i)
-        ,.async_reset_o(sys_rst_active_high)
+         ,.async_reset_o(sys_rst_active_high)
         );
 
 
@@ -86,6 +86,9 @@ module mig_ddr3_ram_testbench
     logic [l2_fill_width_p-1:0]  dram_dma_data_li;
     logic                        dram_dma_data_v_li;
     logic                        dram_dma_data_yumi_lo;
+
+    assign dram_dma_pkt_v_li = 1'b0;
+    assign dram_dma_data_v_li = 1'b0;
 
     mig_ddr3_ram
         #(.bp_params_p(bp_params_p))
@@ -154,5 +157,11 @@ module mig_ddr3_ram_testbench
          ,.tdqs_n  ()
          ,.odt     (ddr3_odt)
         );
+
+    initial begin
+        #(40*1000 /* 40 microseconds */)
+
+        $finish;
+    end
 
 endmodule

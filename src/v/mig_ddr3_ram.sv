@@ -35,13 +35,14 @@ module mig_ddr3_ram
     localparam axi_id_width_p = 4;
     localparam axi_addr_width_p = 64;
     localparam axi_data_width_p = 128;
-    localparam axi_burst_len_p = 1;
+    localparam axi_burst_len_p = 2;
 
-    // ACTIVE-LOW reset for memory interface
-    logic aresetn_li;
+    logic rst_active_low_lo;
     always @(posedge clk_o) begin
-        aresetn_li <= ~rst_o;
+        rst_o <= !rst_active_low_lo;
     end
+
+    wire aresetn_li = rst_o;
 
     // "Application interface" (non-AXI mode) signals we ignore
     logic mmcm_locked_lo, app_sr_active_lo, app_ref_ack_lo, app_zq_ack_lo;
@@ -112,7 +113,7 @@ module mig_ddr3_ram
 
          // Application interface ports
          ,.ui_clk                         (clk_o)
-         ,.ui_clk_sync_rst                (rst_o)
+         ,.ui_clk_sync_rst                (rst_active_low_lo)
 
          ,.mmcm_locked                    (mmcm_locked_lo)
 
