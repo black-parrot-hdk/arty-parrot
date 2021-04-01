@@ -35,7 +35,7 @@ module mig_ddr3_ram
     localparam axi_id_width_p = 4;
     localparam axi_addr_width_p = 64;
     localparam axi_data_width_p = 128;
-    localparam axi_burst_len_p = 2;
+    localparam axi_burst_len_p = 4;
 
     logic rst_active_low_lo;
     always @(posedge clk_o) begin
@@ -58,7 +58,7 @@ module mig_ddr3_ram
     logic axi_awvalid_li;
     logic axi_awready_lo;
 
-    logic [127:0] axi_wdata_li;
+    logic [axi_data_width_p:0] axi_wdata_li;
     logic [15:0]  axi_wstrb_li;
     logic axi_wlast_li;
     logic axi_wvalid_li;
@@ -81,7 +81,7 @@ module mig_ddr3_ram
     logic axi_arready_lo;
 
     logic [3:0]   axi_rid_lo;
-    logic [127:0] axi_rdata_lo;
+    logic [axi_data_width_p:0] axi_rdata_lo;
     logic [1:0]   axi_rresp_lo;
     logic axi_rlast_lo;
     logic axi_rvalid_lo;
