@@ -24,20 +24,5 @@ output [0:0]  ddr3_cs_n, \
 \
 output [1:0]  ddr3_dm, \
 \
-output [0:0]  ddr3_odt, \
-\
-/* Inputs */ \
-/* Single-ended system clock */ \
-input         sys_clk_i, \
-/* Single-ended iodelayctrl clk (reference clock) */ \
-input         clk_ref_i, \
-\
-output        tg_compare_error, \
-output        init_calib_complete, \
-\
-/* System reset - Default polarity of sys_rst pin is Active Low. */ \
-/* System reset polarity will change based on the option  */ \
-/* selected in GUI. */ \
-input         sys_rst
-
+output [0:0]  ddr3_odt
 `endif

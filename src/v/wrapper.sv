@@ -7,7 +7,9 @@ module wrapper
      `declare_bp_proc_params(bp_params_p)
      `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, cce)
       )
-    (`declare_mig_ddr3_native_control_ports
+    (input master_clk_100mhz_i
+     , input master_reset_i
+     ,`declare_mig_ddr3_native_control_ports
      , input rx_i
      , input send_i
      , output logic tx_o
@@ -22,6 +24,8 @@ module wrapper
     logic reset_lo;
     
     assign reset_led_o = reset_lo;
+
+    logic init_calib_complete_lo;
 
     // DRAM interface
     // port directions are from the perspective of the memory module
@@ -40,7 +44,10 @@ module wrapper
     mig_ddr3_ram
         #(.bp_params_p(bp_params_p))
         dram
-        (.clk_o(clock)
+        (.master_clk_100mhz_i(master_clk_100mhz_i)
+         ,.master_reset_i(master_reset_i)
+
+         ,.clk_o(clock)
          ,.rst_o(reset_lo)
 
          // DDR3 control signals and other direct pass-through
@@ -64,13 +71,7 @@ module wrapper
 
          ,.ddr3_odt      (ddr3_odt)
 
-         ,.sys_clk_i    (sys_clk_i)
-         ,.clk_ref_i    (clk_ref_i)
-
-         ,.tg_compare_error    (tg_compare_error)
-         ,.init_calib_complete (init_calib_complete)
-
-         ,.sys_rst      (sys_rst)
+         ,.init_calib_complete_o(init_calib_complete_lo)
 
          // BP core memory interface
          ,.dma_pkt_i            (dram_dma_pkt_li)

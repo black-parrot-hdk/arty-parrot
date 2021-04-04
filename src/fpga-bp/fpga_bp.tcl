@@ -105,12 +105,13 @@ proc load_sources_from_flist { blackparrot_dir } {
         set temp [string trimleft $x $trimchars]
         set expanded [subst $temp]
         lappend include_dirs $expanded
-      # } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit.v" $x]} {
-      #   # bitmasked memories are incorrectly inferred in Kintex 7 and Ultrascale+ FPGAs, this version maps into lutram correctly
-      #   set replace_hard "$BASEJUMP_STL_DIR/hard/ultrascale_plus/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.v"
-      #   set expanded [subst $replace_hard]
-      #   lappend flist $expanded
-      #   puts $expanded
+      } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit.v" $x]} {
+        # bitmasked memories are incorrectly inferred in Kintex 7 and Ultrascale+ FPGAs, this version maps into lutram correctly
+        set replace_hard "$BASEJUMP_STL_DIR/hard/ultrascale_plus/bsg_mem/bsg_mem_1rw_sync_mask_write_bit.v"
+        set expanded [subst $replace_hard]
+        set normalized [file normalize $expanded]
+        lappend source_files $normalized
+        puts $normalized
       } else {
         set expanded [subst $x]
         set normalized [file normalize $expanded]
@@ -134,6 +135,10 @@ set additional_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
 ]
+set xilinx_ip_configurations [list \
+  [file normalize "${arty_dir}src/fpga-bp/ip/mig_7series_0/mig_7series_0.xci" ] \
+  [file normalize "${arty_dir}src/fpga-bp/ip/dram_clk_gen/dram_clk_gen.xci" ] \
+]
 
 set all_include_dirs [concat $flist_include_dirs $additional_include_dirs]
 set_property include_dirs $all_include_dirs [current_fileset]
@@ -147,8 +152,8 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 set obj [get_filesets sources_1]
 add_files -norecurse -scan_for_includes -fileset $obj $flist_source_files
 add_files -norecurse -scan_for_includes -fileset $obj $additional_source_files
-add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_a.prj" ]
-add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/mig/mig_7series_0.xci" ]
+add_files -fileset $obj [file normalize "${arty_dir}src/fpga-bp/ip/mig_7series_0/mig_a.prj" ]
+add_files -fileset $obj $xilinx_ip_configurations
 
 # Set 'sources_1' fileset file properties for remote files
 foreach source_file [concat $flist_source_files $additional_source_files] {
@@ -156,16 +161,17 @@ foreach source_file [concat $flist_source_files $additional_source_files] {
   set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 }
 
-set file [file normalize "${arty_dir}src/fpga-bp/mig/mig_a.prj" ]
+set file [file normalize "${arty_dir}src/fpga-bp/ip/mig_7series_0/mig_a.prj" ]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
 set_property -name "scoped_to_cells" -value "mig_7series_0" -objects $file_obj
 
-set file [file normalize "${arty_dir}src/fpga-bp/mig/mig_7series_0.xci" ]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
-set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
-set_property -name "registered_with_manager" -value "1" -objects $file_obj
-if { ![get_property "is_locked" $file_obj] } {
-  set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
+foreach ip_file $xilinx_ip_configurations {
+  set file_obj [get_files -of_objects [get_filesets sources_1] [list "$ip_file"]]
+  set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
+  set_property -name "registered_with_manager" -value "1" -objects $file_obj
+  if { ![get_property "is_locked" $file_obj] } {
+    set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
+  }
 }
 
 # Set 'sources_1' fileset file properties for local files

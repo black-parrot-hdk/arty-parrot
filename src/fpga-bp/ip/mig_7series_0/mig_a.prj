@@ -23,11 +23,11 @@
 
   <Version>4.2</Version>
 
-  <SystemClock>Single-Ended</SystemClock>
+  <SystemClock>No Buffer</SystemClock>
 
-  <ReferenceClock>Single-Ended</ReferenceClock>
+  <ReferenceClock>No Buffer</ReferenceClock>
 
-  <SysResetPolarity>ACTIVE LOW</SysResetPolarity>
+  <SysResetPolarity>ACTIVE HIGH</SysResetPolarity>
 
   <BankSelectionFlag>FALSE</BankSelectionFlag>
 
@@ -51,12 +51,12 @@
 
   <Controller number="0">
     <MemoryDevice>DDR3_SDRAM/Components/MT41K128M16XX-15E</MemoryDevice>
-    <TimePeriod>3000</TimePeriod>
+    <TimePeriod>3077</TimePeriod>
     <VccAuxIO>1.8V</VccAuxIO>
     <PHYRatio>4:1</PHYRatio>
-    <InputClkFreq>333.333</InputClkFreq>
+    <InputClkFreq>99.997</InputClkFreq>
     <UIExtraClocks>0</UIExtraClocks>
-    <MMCM_VCO>666</MMCM_VCO>
+    <MMCM_VCO>649</MMCM_VCO>
     <MMCMClkOut0> 1.000</MMCMClkOut0>
     <MMCMClkOut1>1</MMCMClkOut1>
     <MMCMClkOut2>1</MMCMClkOut2>
@@ -125,16 +125,10 @@
       <Pin IN_TERM="" IOSTANDARD="SSTL135" PADName="K6" SLEW="" VCCAUX_IO="" name="ddr3_reset_n"/>
       <Pin IN_TERM="" IOSTANDARD="SSTL135" PADName="P5" SLEW="" VCCAUX_IO="" name="ddr3_we_n"/>
     </PinSelection>
-    <Reference_Clock>
-      <Pin Bank="35" PADName="E2(SRCC_P)" name="clk_ref_i"/>
-    </Reference_Clock>
-    <System_Clock>
-      <Pin Bank="35" PADName="D5(SRCC_P)" name="sys_clk_i"/>
-    </System_Clock>
     <System_Control>
-      <Pin Bank="35" PADName="A3" name="sys_rst"/>
-      <Pin Bank="35" PADName="A4" name="init_calib_complete"/>
-      <Pin Bank="35" PADName="B2" name="tg_compare_error"/>
+      <Pin Bank="35" PADName="No connect" name="sys_rst"/>
+      <Pin Bank="35" PADName="No connect" name="init_calib_complete"/>
+      <Pin Bank="35" PADName="No connect" name="tg_compare_error"/>
     </System_Control>
     <TimingParameters>
       <Parameters tcke="5.625" tfaw="45" tras="36" trcd="13.5" trefi="7.8" trfc="160" trp="13.5" trrd="7.5" trtp="7.5" twtr="7.5"/>
