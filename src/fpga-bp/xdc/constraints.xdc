@@ -18,9 +18,8 @@ set_property -dict { PACKAGE_PIN D9    IOSTANDARD LVCMOS33 } [get_ports { master
 # set_property -dict { PACKAGE_PIN C9    IOSTANDARD LVCMOS33 } [get_ports { send_i }]; #IO_L11P_T1_SRCC_16 Sch=btn[1]
 
 # LED
-# Note: voltage was changed to 2.5V to match voltage of DRAM signals in same I/O bank
-set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS25 } [get_ports { error_led_o }]; #IO_L24N_T3_35 Sch=led[4]
-set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS25 } [get_ports { reset_led_o }]; #IO_25_35 Sch=led[5]
+set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { error_led_o }]; #IO_L24N_T3_35 Sch=led[4]
+set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { reset_led_o }]; #IO_25_35 Sch=led[5]
 
 # DRAM
 # PadFunction: IO_L8P_T1_AD14P_35 

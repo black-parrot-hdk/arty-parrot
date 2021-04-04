@@ -112,6 +112,8 @@ proc load_sources_from_flist { blackparrot_dir } {
         set normalized [file normalize $expanded]
         lappend source_files $normalized
         puts $normalized
+      } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit_synth.v" $x]} {
+        # omit this file, it's unused now that we've replaced the bsg_mem_1rw_sync_mask_write_bit module above
       } else {
         set expanded [subst $x]
         set normalized [file normalize $expanded]
@@ -131,6 +133,7 @@ set additional_include_dirs [list \
 set additional_source_files [list \
   [file normalize "${arty_dir}/src/v/wrapper.sv" ] \
   [file normalize "${arty_dir}/src/v/mig_ddr3_ram.sv" ] \
+  [file normalize "${arty_dir}/src/test/mig_ddr3_ram_demo_system.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
