@@ -10,6 +10,7 @@ module mig_ddr3_ram_demo_system
     (input master_clk_100mhz_i
      ,input master_reset_active_low_i
      ,`declare_mig_ddr3_native_control_ports
+     ,input logic input_select_switch_i
      ,output logic pass_led_o
      ,output logic reset_led_o
     );
@@ -97,7 +98,8 @@ module mig_ddr3_ram_demo_system
 
     assign dram_dma_data_ready_and_li = write_blocks_remaining_r == 0;
 
-    assign dram_dma_data_li = 'hDEADBEEFDEADBEEF;
+    // If switch is low, "incorrect" data will be written to RAM, which should make the test fail.
+    assign dram_dma_data_li = input_select_switch_i ? 'hDEADBEEFDEADBEEF : 'h0;
     assign dram_dma_data_v_li = write_blocks_remaining_r > 0;
 
     logic [3:0] write_blocks_remaining_r, write_blocks_remaining_n;

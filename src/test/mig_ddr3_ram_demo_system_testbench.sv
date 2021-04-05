@@ -49,6 +49,8 @@ module mig_ddr3_ram_demo_system_testbench
 
     logic reset_led_lo;
 
+    wire input_select_switch_li = 1'b1;
+
     // Master clock and reset
     bit master_clk_100mhz_i;
     bsg_nonsynth_clock_gen
@@ -75,6 +77,7 @@ module mig_ddr3_ram_demo_system_testbench
          ,.master_reset_active_low_i(master_reset_active_low_i)
 
          ,.reset_led_o(reset_led_lo)
+         ,.input_select_switch_i(input_select_switch_li)
 
          // DDR3 control signals and other direct pass-through
          ,.ddr3_dq      (ddr3_dq)
