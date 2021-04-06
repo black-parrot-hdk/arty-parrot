@@ -21,7 +21,6 @@ module mig_ddr3_ram_demo_system_testbench
     #(parameter bp_params_e bp_params_p = e_bp_unicore_l1_tiny_cfg
       `declare_bp_proc_params(bp_params_p)
       `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, cce)
-      ,localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(caddr_width_p)
       )
     ();
 

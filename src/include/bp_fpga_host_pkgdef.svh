@@ -18,7 +18,7 @@
 
     // Write 2^N bytes to physical memory
     // address = store address, data = zero-padded store data
-    // FPGA sends no reply to PC
+    // FPGA replies with the same command, but with all-zero data field
     e_fpga_host_nbf_write_4     = 8'b0000_0010 // Write 4 bytes
     ,e_fpga_host_nbf_write_8    = 8'b0000_0011 // Write 8 bytes
 

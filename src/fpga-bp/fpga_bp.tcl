@@ -131,6 +131,12 @@ set additional_include_dirs [list \
   [file normalize "${arty_dir}/src/include/" ] \
 ]
 set additional_source_files [list \
+  [file normalize "${arty_dir}/src/include/bp_fpga_host_pkg.sv" ] \
+  [file normalize "${arty_dir}/src/v/uart_rx.sv" ] \
+  [file normalize "${arty_dir}/src/v/uart_tx.sv" ] \
+  [file normalize "${arty_dir}/src/v/bp_fpga_host.sv" ] \
+  [file normalize "${arty_dir}/src/v/bp_fpga_host_io_in.sv" ] \
+  [file normalize "${arty_dir}/src/v/bp_fpga_host_io_out.sv" ] \
   [file normalize "${arty_dir}/src/v/wrapper.sv" ] \
   [file normalize "${arty_dir}/src/v/mig_ddr3_ram.sv" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_demo_system.sv" ] \
@@ -217,6 +223,7 @@ set sim_include_dirs [list \
 set sim_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
+  [file normalize "${arty_dir}/src/test/wrapper_testbench.sv"] \
   [file normalize "${arty_dir}/src/external/ddr3_model.sv"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
@@ -239,7 +246,7 @@ foreach source_file $sim_source_files {
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "mig_ddr3_ram_testbench" -objects $obj
+set_property -name "top" -value "wrapper_testbench" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
