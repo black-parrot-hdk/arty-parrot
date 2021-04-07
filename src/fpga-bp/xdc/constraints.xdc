@@ -8,9 +8,9 @@ create_clock -add -name master_clk_100mhz_i -period 10.00 -waveform {0 5}  [get_
 
 # USB-UART Interface
 # output
-# set_property -dict { PACKAGE_PIN D10   IOSTANDARD LVCMOS33 } [get_ports { tx_o }]; #IO_L19N_T3_VREF_16 Sch=uart_txd_out
+set_property -dict { PACKAGE_PIN D10   IOSTANDARD LVCMOS33 } [get_ports { uart_tx_o }]; #IO_L19N_T3_VREF_16 Sch=uart_txd_out
 # input
-# set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { rx_i }]; #IO_L14N_T2_SRCC_16 Sch=uart_rxd_in
+set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { uart_rx_i }]; #IO_L14N_T2_SRCC_16 Sch=uart_rxd_in
 
 # switches
 set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { input_select_switch_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
@@ -19,7 +19,7 @@ set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { input_
 set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { master_reset_active_low_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
 
 # LED
-set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { pass_led_o }]; #IO_L24N_T3_35 Sch=led[4]
+set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { error_led_o }]; #IO_L24N_T3_35 Sch=led[4]
 set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { reset_led_o }]; #IO_25_35 Sch=led[5]
 
 # DRAM

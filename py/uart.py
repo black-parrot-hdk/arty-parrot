@@ -153,7 +153,7 @@ def readNBF(args):
   addr = sp.read(args.nbf_addr_bytes)
   data = sp.read(args.nbf_data_bytes)
   if (len(opcode) != args.nbf_op_bytes) or (len(addr) != args.nbf_addr_bytes) or (len(data) != args.nbf_data_bytes):
-    print('Failed to recevie full NBF packet')
+    print('Failed to receive full NBF packet')
     return (None, None, None)
   return (opcode.hex(), addr.hex(), data.hex())
 
