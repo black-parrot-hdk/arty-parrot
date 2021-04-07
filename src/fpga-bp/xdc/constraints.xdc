@@ -13,7 +13,7 @@ set_property -dict { PACKAGE_PIN D10   IOSTANDARD LVCMOS33 } [get_ports { uart_t
 set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { uart_rx_i }]; #IO_L14N_T2_SRCC_16 Sch=uart_rxd_in
 
 # switches
-set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { input_select_switch_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
+# set_property -dict { PACKAGE_PIN A8    IOSTANDARD LVCMOS33 } [get_ports { input_select_switch_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
 
 # reset button
 set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { master_reset_active_low_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]

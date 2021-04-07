@@ -147,6 +147,7 @@ set additional_source_files [list \
 set xilinx_ip_configurations [list \
   [file normalize "${arty_dir}src/fpga-bp/ip/mig_7series_0/mig_7series_0.xci" ] \
   [file normalize "${arty_dir}src/fpga-bp/ip/dram_clk_gen/dram_clk_gen.xci" ] \
+  [file normalize "${arty_dir}src/fpga-bp/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
 ]
 
 set all_include_dirs [concat $flist_include_dirs $additional_include_dirs]
