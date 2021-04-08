@@ -20,7 +20,7 @@ module wrapper_testbench
       // Use artificially fast baud for simulation
       // Entire DUT system is running on a downsampled clock, while our testbench runs on the 100MHz master clock
       , parameter uart_100mhz_clk_per_bit_p = 10 // 100 MHz clock / 10_000_000 Baud
-      , parameter uart_memory_clk_per_bit_p = 8 // approx 81.25 MHz clock (12308ps period) / 10_000_000 Baud
+      , parameter uart_memory_clk_per_bit_p = 5 // 50MHz clock / 9600 Baud
       , parameter uart_data_bits_p = 8 // between 5 and 9 bits
       , parameter uart_parity_bit_p = 0 // 0 or 1
       , parameter uart_parity_odd_p = 0 // 0 for even parity, 1 for odd parity
