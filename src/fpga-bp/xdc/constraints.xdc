@@ -35,5 +35,4 @@ set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { reset_
 set_property INTERNAL_VREF  0.675 [get_iobanks 34]
 
 # Suppress [Place 30-172] Sub-optimal placement for a clock-capable IO pin and PLL pair.
-# TODO: investigate running the 100MHz clock through the MMCM instead
 set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets master_clk_100mhz_i_IBUF]

@@ -19,8 +19,8 @@ module wrapper_testbench
 
       // Use artificially fast baud for simulation
       // Entire DUT system is running on a downsampled clock, while our testbench runs on the 100MHz master clock
-      , parameter uart_100mhz_clk_per_bit_p = 10 // 100 MHz clock / 10_000_000 Baud
-      , parameter uart_memory_clk_per_bit_p = 5 // 50MHz clock / 9600 Baud
+      , parameter uart_100mhz_clk_per_bit_p = 20 // 100 MHz clock / 5_000_000 Baud
+      , parameter uart_core_clk_per_bit_p = 4 // 20MHz clock / 5_000_000 Baud
       , parameter uart_data_bits_p = 8 // between 5 and 9 bits
       , parameter uart_parity_bit_p = 0 // 0 or 1
       , parameter uart_parity_odd_p = 0 // 0 for even parity, 1 for odd parity
@@ -76,7 +76,7 @@ module wrapper_testbench
     logic device_uart_rx_li, device_uart_tx_lo;
     wrapper
         #(.bp_params_p(bp_params_p)
-          ,.uart_clk_per_bit_p(uart_memory_clk_per_bit_p)
+          ,.uart_clk_per_bit_p(uart_core_clk_per_bit_p)
           )
         dut
         (.master_clk_100mhz_i(master_clk_100mhz_i)

@@ -233,6 +233,7 @@ module bp_fpga_host_io_out
     io_resp_v_o = 1'b0;
     io_nbf_yumi = 1'b0;
     io_nbf_v = 1'b0;
+    io_cmd_yumi = 1'b0;
 
     // registers
     state_n = state_r;

@@ -111,8 +111,9 @@ module mig_ddr3_ram
     logic axi_rvalid_core_clk_lo;
     logic axi_rready_core_clk_li;
 
-    // Ignored qos signals
+    // Ignored signals
     logic [3:0] axi_arqos_core_clk_li, axi_awqos_core_clk_li;
+    logic [3:0] axi_arregion_core_clk_li, axi_awregion_core_clk_li;
 
     // AXI bus from clock domain crossing to DRAM
     logic [3:0]  axi_awid_ui_clk_li;
@@ -276,6 +277,7 @@ module mig_ddr3_ram
          ,.m_axi_awqos                    (axi_awqos_core_clk_li)
          ,.m_axi_awvalid                  (axi_awvalid_ui_clk_li)
          ,.m_axi_awready                  (axi_awready_ui_clk_lo)
+         ,.m_axi_awregion                 (axi_awregion_core_clk_li)
 
          // AXI Slave Interface Write Data Ports
          ,.m_axi_wdata                    (axi_wdata_ui_clk_li)
@@ -302,6 +304,7 @@ module mig_ddr3_ram
          ,.m_axi_arqos                    (axi_arqos_core_clk_li)
          ,.m_axi_arvalid                  (axi_arvalid_ui_clk_li)
          ,.m_axi_arready                  (axi_arready_ui_clk_lo)
+         ,.m_axi_arregion                 (axi_arregion_core_clk_li)
 
          // Slave Interface Read Data Ports
          ,.m_axi_rid                      (axi_rid_ui_clk_lo)
@@ -324,6 +327,7 @@ module mig_ddr3_ram
          ,.s_axi_awqos                    (4'h0)
          ,.s_axi_awvalid                  (axi_awvalid_core_clk_li)
          ,.s_axi_awready                  (axi_awready_core_clk_lo)
+         ,.s_axi_awregion                 (4'h0)
 
          // AXI Slave Interface Write Data Ports
          ,.s_axi_wdata                    (axi_wdata_core_clk_li)
@@ -350,6 +354,7 @@ module mig_ddr3_ram
          ,.s_axi_arqos                    (4'h0)
          ,.s_axi_arvalid                  (axi_arvalid_core_clk_li)
          ,.s_axi_arready                  (axi_arready_core_clk_lo)
+         ,.s_axi_arregion                 (4'h0)
 
          // Slave Interface Read Data Ports
          ,.s_axi_rid                      (axi_rid_core_clk_lo)
