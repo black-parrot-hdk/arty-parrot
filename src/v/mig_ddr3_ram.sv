@@ -12,12 +12,13 @@ module mig_ddr3_ram
       )
     // 100MHz master clock, used only for RAM
     (input logic sys_clk_i
+    ,input logic reset_sys_clk_i
     // 200MHz reference clock, used only for RAM
     ,input logic ref_clk_i
     // lower-frequency clock, used for the core and all I/O
     // ALL PORTS are synchronized to this clock
     ,input logic core_clk_i
-    ,input logic master_reset_i
+    ,input logic reset_core_clk_i
 
     ,`declare_mig_ddr3_native_control_ports
 
@@ -42,19 +43,13 @@ module mig_ddr3_ram
     localparam axi_data_width_p = 128;
     localparam axi_burst_len_p = 4;
 
-    // TODO: technically, the reset signal should probably be synchronized explicitly
-    // At the moment, the relevant clocks are in-phase and nice multiples (50, 100, 200 MHz)
-
-    logic ui_clk_lo, ui_rst_lo;
-    logic ui_rst_active_low_li;
+    logic ui_clk_lo, reset_ui_clk_lo;
+    logic reset_ui_clk_active_low_li;
     always @(posedge ui_clk_lo) begin
-        ui_rst_active_low_li <= !ui_rst_lo;
+        reset_ui_clk_active_low_li <= !reset_ui_clk_lo;
     end
 
-    logic core_rst_active_low_li;
-    always @(posedge ui_clk_lo) begin
-        core_rst_active_low_li <= !master_reset_i;
-    end
+    wire reset_core_clk_active_low_li = !reset_core_clk_i;
 
     logic init_calib_complete_ui_clk_lo;
     bsg_dff_chain
@@ -182,11 +177,11 @@ module mig_ddr3_ram
 
          // Application interface ports
          ,.ui_clk                         (ui_clk_lo)
-         ,.ui_clk_sync_rst                (ui_rst_lo)
+         ,.ui_clk_sync_rst                (reset_ui_clk_lo)
 
          ,.mmcm_locked                    (mmcm_locked_lo)
 
-         ,.aresetn                        (ui_rst_active_low_li)
+         ,.aresetn                        (reset_ui_clk_active_low_li)
 
          ,.app_sr_req                     (1'b0)
          ,.app_ref_req                    (1'b0)
@@ -252,17 +247,17 @@ module mig_ddr3_ram
          ,.device_temp                    (device_temp_li)
 
          // Input reset signal
-         ,.sys_rst                        (master_reset_i)
+         ,.sys_rst                        (reset_sys_clk_i)
          );
 
     axi_memory_clock_converter clock_crossing
         // Clocking for the master interface (to DRAM)
         (.m_axi_aclk     (ui_clk_lo)
-         ,.m_axi_aresetn (ui_rst_active_low_li)
+         ,.m_axi_aresetn (reset_ui_clk_active_low_li)
 
          // Clocking for the slave interface (from core/cache DMA translator)
          ,.s_axi_aclk     (core_clk_i)
-         ,.s_axi_aresetn  (core_rst_active_low_li)
+         ,.s_axi_aresetn  (reset_core_clk_active_low_li)
 
          // Master bus
          // AXI Slave Interface Write Address Ports
@@ -379,7 +374,7 @@ module mig_ddr3_ram
           )
         cache_to_axi 
         (.clk_i   (core_clk_i)
-         ,.reset_i(master_reset_i)
+         ,.reset_i(reset_core_clk_i)
 
          ,.dma_pkt_i       (dma_pkt_i)
          ,.dma_pkt_v_i     (dma_pkt_v_i)

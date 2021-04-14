@@ -78,6 +78,9 @@ module mig_ddr3_ram_testbench
          ,.async_reset_o(master_reset_li)
         );
 
+    // in simulation, fake the synchronized clocks
+    wire reset_sys_clk_li = master_reset_li;
+    wire reset_core_clk_li = master_reset_li;
 
     logic [dma_pkt_width_lp-1:0] dram_dma_pkt_li;
     logic                        dram_dma_pkt_v_li;
@@ -99,9 +102,10 @@ module mig_ddr3_ram_testbench
         #(.bp_params_p(bp_params_p))
         ram
         (.sys_clk_i(sys_clk_li)
+         ,.reset_sys_clk_i(reset_sys_clk_li)
          ,.ref_clk_i(ref_clk_li)
          ,.core_clk_i(core_clk_li)
-         ,.master_reset_i(master_reset_li)
+         ,.reset_core_clk_i(reset_core_clk_li)
 
          // DDR3 control signals and other direct pass-through
          ,.ddr3_dq      (ddr3_dq)

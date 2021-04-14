@@ -43,20 +43,46 @@ module wrapper
 
     logic fpga_host_error_lo;
 
-    wire master_reset_i = !master_reset_active_low_i;
-    assign reset_led_o = master_reset_i;
+    wire master_reset_async_i = !master_reset_active_low_i;
+    assign reset_led_o = master_reset_async_i;
     assign error_led_o = fpga_host_error_lo;
 
+    // Synchronizer for master clock reset
+    logic reset_master_clk_lo;
+    bsg_dff_chain
+        #(.width_p(1)
+          ,.num_stages_p(2)
+        )
+        reset_sync_master_clk
+        (.clk_i(master_clk_100mhz_i)
+         ,.data_i(master_reset_async_i)
+         ,.data_o(reset_master_clk_lo)
+        );
+
     // Clock generation
+    logic reset_sys_clk_lo;
     logic sys_clk_lo, ref_clk_lo, core_clk_lo;
+    assign sys_clk_lo = master_clk_100mhz_i;
+    assign reset_sys_clk_lo = reset_master_clk_lo;
     dram_clk_gen clk_gen
       (.master_clk_100mhz_i(master_clk_100mhz_i)
-       ,.reset(master_reset_i)
+       ,.reset(reset_sys_clk_lo)
        ,.clk_ref_o(ref_clk_lo)
        ,.clk_core_o(core_clk_lo)
       );
-    assign sys_clk_lo = master_clk_100mhz_i;
 
+    
+    // Synchronizer for core clock reset
+    logic reset_core_clk_lo;
+    bsg_dff_chain
+        #(.width_p(1)
+          ,.num_stages_p(2)
+        )
+        reset_sync_core_clk
+        (.clk_i(core_clk_lo)
+         ,.data_i(master_reset_async_i)
+         ,.data_o(reset_core_clk_lo)
+        );
 
     // I/O command buses
     // to FPGA Host
@@ -89,9 +115,10 @@ module wrapper
         #(.bp_params_p(bp_params_p))
         dram_controller
         (.sys_clk_i(sys_clk_lo)
+         ,.reset_sys_clk_i(reset_sys_clk_lo)
          ,.ref_clk_i(ref_clk_lo)
          ,.core_clk_i(core_clk_lo)
-         ,.master_reset_i(master_reset_i)
+         ,.reset_core_clk_i(reset_core_clk_lo)
 
          // DDR3 control signals and other direct pass-through
          ,.ddr3_dq      (ddr3_dq)
@@ -146,7 +173,7 @@ module wrapper
         )
         fpga_host
         (.clk_i(core_clk_lo)
-         ,.reset_i(master_reset_i)
+         ,.reset_i(reset_core_clk_lo)
 
          // to FPGA Host
          ,.io_cmd_i           (fpga_host_io_cmd_li)
@@ -180,7 +207,7 @@ module wrapper
       #(.bp_params_p(bp_params_p))
       core
       (.clk_i(core_clk_lo)
-       ,.reset_i(master_reset_i)
+       ,.reset_i(reset_core_clk_lo)
 
        // I/O to FPGA Host
        ,.io_cmd_o        (fpga_host_io_cmd_li)
