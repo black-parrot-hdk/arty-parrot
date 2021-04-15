@@ -67,8 +67,8 @@ module wrapper
     dram_clk_gen clk_gen
       (.master_clk_100mhz_i(master_clk_100mhz_i)
        ,.reset(reset_sys_clk_lo)
-       ,.clk_ref_o(ref_clk_lo)
-       ,.clk_core_o(core_clk_lo)
+       ,.ref_clk_o(ref_clk_lo)
+       ,.core_clk_o(core_clk_lo)
       );
 
     
