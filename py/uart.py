@@ -126,8 +126,13 @@ def interactiveCh(args):
 ## NBF Mode
 
 # encode 'op_addr_data' hex nbf string to bytes
-def encodeNBF(string):
-  return hexStringToBytes(string.strip().replace('_',''))
+def encodeNBF(string: str):
+  def parse_and_swap_endianness(part: str):
+    b = bytearray(hexStringToBytes(part))
+    b.reverse()
+    return bytes(b)
+  part_bytes = map(parse_and_swap_endianness, string.strip().split('_'))
+  return b''.join(part_bytes)
 
 # decode (op, addr, data) bytes to 'op_addr_data' hex nbf string
 def decodeNBF(op_bytes, addr_bytes, data_bytes):
@@ -149,9 +154,15 @@ def nbfHasResponse(opcode_hex):
 
 # read NBF packet from serial port, return (op, addr, data) hex strings
 def readNBF(args):
+  def swap_endianness(b: bytes):
+    b = bytearray(b)
+    b.reverse()
+    return bytes(b)
+
   opcode = sp.read(args.nbf_op_bytes)
-  addr = sp.read(args.nbf_addr_bytes)
-  data = sp.read(args.nbf_data_bytes)
+  addr = swap_endianness(sp.read(args.nbf_addr_bytes))
+  data = swap_endianness(sp.read(args.nbf_data_bytes))
+
   if (len(opcode) != args.nbf_op_bytes) or (len(addr) != args.nbf_addr_bytes) or (len(data) != args.nbf_data_bytes):
     print('Failed to receive full NBF packet')
     return (None, None, None)
@@ -171,7 +182,8 @@ def writeNBF(args, nbf_hex):
       (opcode_in, addr_in, data_in) = readNBF(args)
       print('REPLY: {0}_{1}_{2}'.format(opcode_in, addr_in, data_in))
     return bytes_written
-  except:
+  except RuntimeError as e:
+    raise
     print('failed to transfer nbf file')
     return 0
 
@@ -186,7 +198,7 @@ def sendNBF(args):
       for nbf in f:
         bytes_written += writeNBF(args, nbf)
     print('wrote {0} bytes'.format(bytes_written))
-  except:
+  except RuntimeError as e:
     print('failed to transfer nbf file...closing')
     if not sp is None and sp.is_open:
       sp.close()
@@ -203,6 +215,9 @@ def listenNBF(args):
       if (opcode_in is None):
         return
       print('REPLY: {0}_{1}_{2}'.format(opcode_in, addr_in, data_in))
+      if opcode_in == '82':
+        # putch
+        print("char: " + chr(int(data_in, 16)))
       timeout_cnt = 0
     # no bytes received, increment timeout counter
     # sleep for a second
