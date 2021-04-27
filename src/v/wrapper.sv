@@ -64,9 +64,19 @@ module wrapper
     logic sys_clk_lo, ref_clk_lo, core_clk_lo;
     assign sys_clk_lo = master_clk_100mhz_i;
     assign reset_sys_clk_lo = reset_master_clk_lo;
+
+    // Reset generation
+    // We reset the clock gen MMCM on the rising edge of the incoming reset only; this allows the
+    // clock to start running again and downstream clocked modules to "see" the reset subsequently. 
+    logic last_reset_sys_clk_r, clock_reset_sys_clk_r;
+    always_ff @(posedge sys_clk_lo) begin
+      last_reset_sys_clk_r <= reset_sys_clk_lo;
+      clock_reset_sys_clk_r <= reset_sys_clk_lo && !last_reset_sys_clk_r;
+    end
+
     dram_clk_gen clk_gen
       (.master_clk_100mhz_i(master_clk_100mhz_i)
-       ,.reset(reset_sys_clk_lo)
+       ,.reset(clock_reset_sys_clk_r)
        ,.ref_clk_o(ref_clk_lo)
        ,.core_clk_o(core_clk_lo)
       );
@@ -212,7 +222,7 @@ module wrapper
        // I/O to FPGA Host
        ,.io_cmd_o        (fpga_host_io_cmd_li)
        ,.io_cmd_v_o      (fpga_host_io_cmd_v_li)
-       ,.io_cmd_ready_i  (fpga_host_io_cmd_ready_and_lo)
+       ,.io_cmd_ready_and_i  (fpga_host_io_cmd_ready_and_lo)
 
        ,.io_resp_i       (fpga_host_io_resp_lo)
        ,.io_resp_v_i     (fpga_host_io_resp_v_lo)
@@ -225,7 +235,7 @@ module wrapper
 
        ,.io_resp_o       (fpga_host_io_resp_li)
        ,.io_resp_v_o     (fpga_host_io_resp_v_li)
-       ,.io_resp_ready_i (fpga_host_io_resp_ready_and_lo)
+       ,.io_resp_ready_and_i (fpga_host_io_resp_ready_and_lo)
 
        // DRAM interface
        ,.dma_pkt_o      (dram_controller_dma_pkt_li)
