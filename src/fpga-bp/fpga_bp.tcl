@@ -149,6 +149,15 @@ set xilinx_ip_configurations [list \
   [file normalize "${arty_dir}/src/fpga-bp/ip/dram_clk_gen/dram_clk_gen.xci" ] \
   [file normalize "${arty_dir}/src/fpga-bp/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
 ]
+set xilinx_ip_output_dirs [list \
+  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/mig_7series_0/" ] \
+  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/dram_clk_gen" ] \
+  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/axi_memory_clock_converter" ] \
+]
+
+foreach ip_dir $xilinx_ip_output_dirs {
+  file mkdir $ip_dir
+}
 
 set all_include_dirs [concat $flist_include_dirs $additional_include_dirs]
 set_property include_dirs $all_include_dirs [current_fileset]
