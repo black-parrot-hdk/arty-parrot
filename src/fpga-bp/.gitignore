@@ -1,0 +1,7 @@
+fpga_bp/
+*.jou
+*.log
+
+ip/*/*.v
+ip/*/*.vhdl
+ip/*/*.dcp
