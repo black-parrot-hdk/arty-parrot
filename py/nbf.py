@@ -1,6 +1,7 @@
 from typing import Optional
 
 # host -> device
+# TODO: 4-byte versions omitted
 OPCODE_WRITE_8 = 0x03
 OPCODE_READ_8 = 0x13
 OPCODE_FENCE = 0xfe
@@ -76,11 +77,19 @@ class NbfCommand:
             and (data_int is None or self.data_int == data_int)
 
     def __str__(self):
-        return f"{self.opcode:02x}_{reverse_bytes(self.address).hex()}_{reverse_bytes(self.data).hex()}"
+        return f"{self.opcode:02x}_{self.address_hex_str}_{reverse_bytes(self.data).hex()}"
+
+    @property
+    def address_hex_str(self) -> str:
+        return reverse_bytes(self.address).hex()
 
     @property
     def address_int(self) -> int:
         return int.from_bytes(self.address, 'little')
+
+    @property
+    def data_hex_str(self) -> str:
+        return reverse_bytes(self.data).hex()
 
     @property
     def data_int(self) -> int:
@@ -147,7 +156,7 @@ if __name__ == '__main__':
             stringified = str(command)
             self.assertEqual(stringified, "03_00800009e0_0000000080000790")
 
-        def test_bytes_to_int(self):
+        def test_fields_to_int(self):
             command = NbfCommand(
                 0,
                 bytes([0xe0, 0x09, 0x00, 0x80, 0x00]),
@@ -155,6 +164,15 @@ if __name__ == '__main__':
             )
             self.assertEqual(command.address_int, 0x800009e0)
             self.assertEqual(command.data_int, 0x80000790)
+
+        def test_fields_to_str(self):
+            command = NbfCommand(
+                0,
+                bytes([0xe0, 0x09, 0x00, 0x80, 0x00]),
+                bytes([0x90, 0x07, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00])
+            )
+            self.assertEqual(command.address_hex_str, "00800009e0")
+            self.assertEqual(command.data_hex_str, "0000000080000790")
 
         def test_to_bytes(self):
             command = NbfCommand(
