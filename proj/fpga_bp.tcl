@@ -111,7 +111,6 @@ proc load_sources_from_flist { blackparrot_dir } {
         set expanded [subst $replace_hard]
         set normalized [file normalize $expanded]
         lappend source_files $normalized
-        puts $normalized
       } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit_synth.v" $x]} {
         # omit this file, it's unused now that we've replaced the bsg_mem_1rw_sync_mask_write_bit module above
       } else {
@@ -234,12 +233,19 @@ set sim_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
   [file normalize "${arty_dir}/src/test/wrapper_testbench.sv"] \
-  [file normalize "${arty_dir}/src/external/ddr3_model.sv"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
 ]
+set ddr3_model_path [file normalize "${arty_dir}/src/external/ddr3_model.sv"]
+if {[file exists $ddr3_model_path]} {
+  lappend sim_source_files $ddr3_model_path
+} else {
+  puts "WARNING: DDR3 model files not found at \"${arty_dir}/src/external\", some testbenches will not work"
+}
+
 set_property include_dirs [concat $sim_include_dirs $all_include_dirs] $obj
 add_files -norecurse -scan_for_includes -fileset $obj $sim_source_files
+
 
 # Set 'sim_1' fileset file properties for remote files
 foreach source_file $sim_source_files {
