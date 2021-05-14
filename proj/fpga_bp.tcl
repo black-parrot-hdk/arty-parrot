@@ -111,7 +111,6 @@ proc load_sources_from_flist { blackparrot_dir } {
         set expanded [subst $replace_hard]
         set normalized [file normalize $expanded]
         lappend source_files $normalized
-        puts $normalized
       } elseif {[string match "*bsg_mem_1rw_sync_mask_write_bit_synth.v" $x]} {
         # omit this file, it's unused now that we've replaced the bsg_mem_1rw_sync_mask_write_bit module above
       } else {
@@ -145,14 +144,14 @@ set additional_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
 ]
 set xilinx_ip_configurations [list \
-  [file normalize "${arty_dir}/src/fpga-bp/ip/mig_7series_0/mig_7series_0.xci" ] \
-  [file normalize "${arty_dir}/src/fpga-bp/ip/dram_clk_gen/dram_clk_gen.xci" ] \
-  [file normalize "${arty_dir}/src/fpga-bp/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
+  [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_7series_0.xci" ] \
+  [file normalize "${arty_dir}/proj/ip/dram_clk_gen/dram_clk_gen.xci" ] \
+  [file normalize "${arty_dir}/proj/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
 ]
 set xilinx_ip_output_dirs [list \
-  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/mig_7series_0/" ] \
-  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/dram_clk_gen" ] \
-  [file normalize "${arty_dir}/src/fpga-bp/fpga_bp/generated/axi_memory_clock_converter" ] \
+  [file normalize "${arty_dir}/proj/fpga_bp/generated/mig_7series_0/" ] \
+  [file normalize "${arty_dir}/proj/fpga_bp/generated/dram_clk_gen" ] \
+  [file normalize "${arty_dir}/proj/fpga_bp/generated/axi_memory_clock_converter" ] \
 ]
 
 foreach ip_dir $xilinx_ip_output_dirs {
@@ -171,7 +170,7 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 set obj [get_filesets sources_1]
 add_files -norecurse -scan_for_includes -fileset $obj $flist_source_files
 add_files -norecurse -scan_for_includes -fileset $obj $additional_source_files
-add_files -fileset $obj [file normalize "${arty_dir}/src/fpga-bp/ip/mig_7series_0/mig_a.prj" ]
+add_files -fileset $obj [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_a.prj" ]
 add_files -fileset $obj $xilinx_ip_configurations
 
 # Set 'sources_1' fileset file properties for remote files
@@ -180,7 +179,7 @@ foreach source_file [concat $flist_source_files $additional_source_files] {
   set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 }
 
-set file [file normalize "${arty_dir}/src/fpga-bp/ip/mig_7series_0/mig_a.prj" ]
+set file [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_a.prj" ]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
 set_property -name "scoped_to_cells" -value "mig_7series_0" -objects $file_obj
 
@@ -210,9 +209,9 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${arty_dir}/src/fpga-bp/xdc/constraints.xdc]"
+set file "[file normalize ${arty_dir}/proj/xdc/constraints.xdc]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
-set file "${arty_dir}/src/fpga-bp/xdc/constraints.xdc"
+set file "${arty_dir}/proj/xdc/constraints.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
@@ -234,12 +233,19 @@ set sim_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
   [file normalize "${arty_dir}/src/test/wrapper_testbench.sv"] \
-  [file normalize "${arty_dir}/src/external/ddr3_model.sv"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
 ]
+set ddr3_model_path [file normalize "${arty_dir}/src/external/ddr3_model.sv"]
+if {[file exists $ddr3_model_path]} {
+  lappend sim_source_files $ddr3_model_path
+} else {
+  puts "WARNING: DDR3 model files not found at \"${arty_dir}/src/external\", some testbenches will not work"
+}
+
 set_property include_dirs [concat $sim_include_dirs $all_include_dirs] $obj
 add_files -norecurse -scan_for_includes -fileset $obj $sim_source_files
+
 
 # Set 'sim_1' fileset file properties for remote files
 foreach source_file $sim_source_files {

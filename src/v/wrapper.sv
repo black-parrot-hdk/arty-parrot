@@ -13,7 +13,7 @@ module wrapper
       , parameter nbf_data_width_p = dword_width_gp
       , localparam nbf_width_lp = `bp_fpga_host_nbf_width(nbf_addr_width_p, nbf_data_width_p)
 
-      , parameter uart_clk_per_bit_p = 2083 // 20MHz clock / 9600 Baud
+      , parameter uart_clk_per_bit_p = 174 // 20MHz clock / 115200 Baud
       , parameter uart_data_bits_p = 8 // between 5 and 9 bits
       , parameter uart_parity_bit_p = 0 // 0 or 1
       , parameter uart_parity_odd_p = 0 // 0 for even parity, 1 for odd parity
@@ -37,8 +37,6 @@ module wrapper
 
      , output logic error_led_o
      , output logic reset_led_o
-
-     , output logic reset_core_clk_o
     );
 
     `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
@@ -63,7 +61,7 @@ module wrapper
 
     // Clock generation
     logic reset_sys_clk_lo;
-    logic sys_clk_lo, ref_clk_lo, core_clk_lo, dbg_clk_o;
+    logic sys_clk_lo, ref_clk_lo, core_clk_lo;
     assign sys_clk_lo = master_clk_100mhz_i;
     assign reset_sys_clk_lo = reset_master_clk_lo;
 
@@ -81,12 +79,11 @@ module wrapper
        ,.reset(clock_reset_sys_clk_r)
        ,.ref_clk_o(ref_clk_lo)
        ,.core_clk_o(core_clk_lo)
-       ,.dbg_clk_o(dbg_clk_o)
       );
 
     
     // Synchronizer for core clock reset
-    (* mark_debug = "true" *) logic reset_core_clk_lo;
+    logic reset_core_clk_lo;
     bsg_dff_chain
         #(.width_p(1)
           ,.num_stages_p(2)
@@ -97,35 +94,30 @@ module wrapper
          ,.data_o(reset_core_clk_lo)
         );
 
-    
-    always_ff @(posedge core_clk_lo) begin
-      reset_core_clk_o <= reset_core_clk_lo;
-    end
-
     // I/O command buses
     // to FPGA Host
-    (* mark_debug = "true" *) bp_bedrock_io_mem_msg_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
-    (* mark_debug = "true" *) logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
-    (* mark_debug = "true" *) logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
+    bp_bedrock_io_mem_msg_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
+    logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
+    logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
     
     // from FPGA Host
-    (* mark_debug = "true" *) bp_bedrock_io_mem_msg_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
-    (* mark_debug = "true" *) logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
-    (* mark_debug = "true" *) logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
+    bp_bedrock_io_mem_msg_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
+    logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
+    logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
 
 
     // bsg cache DRAM buses
-    (* mark_debug = "true" *) logic [dma_pkt_width_lp-1:0] dram_controller_dma_pkt_li;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_pkt_v_li;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_pkt_yumi_lo;
+    logic [dma_pkt_width_lp-1:0] dram_controller_dma_pkt_li;
+    logic                        dram_controller_dma_pkt_v_li;
+    logic                        dram_controller_dma_pkt_yumi_lo;
 
-    (* mark_debug = "true" *) logic[l2_fill_width_p-1:0]   dram_controller_dma_data_lo;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_data_v_lo;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_data_ready_and_li;
+    logic[l2_fill_width_p-1:0]   dram_controller_dma_data_lo;
+    logic                        dram_controller_dma_data_v_lo;
+    logic                        dram_controller_dma_data_ready_and_li;
 
-    (* mark_debug = "true" *) logic [l2_fill_width_p-1:0]  dram_controller_dma_data_li;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_data_v_li;
-    (* mark_debug = "true" *) logic                        dram_controller_dma_data_yumi_lo;
+    logic [l2_fill_width_p-1:0]  dram_controller_dma_data_li;
+    logic                        dram_controller_dma_data_v_li;
+    logic                        dram_controller_dma_data_yumi_lo;
 
     // DRAM controller
     logic init_calib_complete_lo;
