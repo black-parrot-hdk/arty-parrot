@@ -13,6 +13,7 @@ OPCODE_PUTCH = 0x82
 ADDRESS_CSR_FREEZE = 0x0000200002
 ADDRESS_CSR_FREEZE = 0x0000200002
 
+# addresses are 40-bit by default
 ADDRESS_LENGTH_BYTES = 5
 DATA_LENGTH_BYTES = 8
 
@@ -43,6 +44,9 @@ class NbfCommand:
 
     @staticmethod
     def with_values(opcode: int, address_int: int, data_int: int) -> 'NbfCommand':
+        """
+        Creates an NbfCommand from integer values of address and data, rather than byte buffers.
+        """
         return NbfCommand(
             opcode,
             address_int.to_bytes(ADDRESS_LENGTH_BYTES, 'little'),
@@ -51,6 +55,9 @@ class NbfCommand:
 
     @staticmethod
     def parse(string: str) -> 'NbfCommand':
+        """
+        Parses a textual nbf command, of the form "03_0080000008_ff81011301000117"
+        """
         part_strs = string.split('_')
         if len(part_strs) != 3:
             raise NbfParseError(f"nbf command \"{string}\" malformed, should have exactly three parts")
@@ -72,11 +79,18 @@ class NbfCommand:
         return NbfCommand(opcode, addr, data)
 
     def matches(self, opcode: int, address_int: int, data_int: Optional[int]) -> bool:
+        """
+        Checks whether the current command has the given opcode, address and data.
+        If "data" is None, checks only opcode and address.
+        """
         return self.opcode == opcode \
             and self.address_int == address_int \
             and (data_int is None or self.data_int == data_int)
 
     def __str__(self):
+        """
+        Stringifies to textual nbf format.
+        """
         return f"{self.opcode:02x}_{self.address_hex_str}_{reverse_bytes(self.data).hex()}"
 
     @property
@@ -107,6 +121,10 @@ class NbfCommand:
         )
 
     def expects_reply(self) -> bool:
+        """
+        Returns True if this command is known to expect a reply. Replies will have the
+        same opcode as this command. False otherwise.
+        """
         return self.opcode in [
             OPCODE_WRITE_8,
             OPCODE_READ_8,
@@ -115,6 +133,10 @@ class NbfCommand:
         ]
 
     def is_correct_reply(self, reply: 'NbfCommand') -> bool:
+        """
+        Checks whether the given command is a valid, correct reply for the
+        current command. Returns True if correct, and False otherwise.
+        """
         if not self.expects_reply:
             return False
 

@@ -93,6 +93,7 @@ class HostApp:
         if not command.is_correct_reply(reply):
             self.reply_violations += 1
             _log(LogDomain.REPLY, f'Unexpected reply: {command} -> {reply}')
+            # TODO: abort on invalid reply?
 
     def load_file(self, source_file: str, ignore_unfreezes: bool = False):
         file = NbfFile(source_file)
