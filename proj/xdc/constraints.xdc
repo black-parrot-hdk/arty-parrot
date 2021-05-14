@@ -19,9 +19,8 @@ set_property -dict { PACKAGE_PIN A9    IOSTANDARD LVCMOS33 } [get_ports { uart_r
 set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { master_reset_active_low_i }]; #IO_L6N_T0_VREF_16 Sch=btn[0]
 
 # LED
-set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { error_led_o }];
-set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { reset_led_o }];
-set_property -dict { PACKAGE_PIN T9    IOSTANDARD LVCMOS33 } [get_ports { reset_core_clk_o }];
+set_property -dict { PACKAGE_PIN H5    IOSTANDARD LVCMOS33 } [get_ports { error_led_o }]; #IO_L24N_T3_35 Sch=led[4]
+set_property -dict { PACKAGE_PIN J5    IOSTANDARD LVCMOS33 } [get_ports { reset_led_o }]; #IO_25_35 Sch=led[5]
 
 # DRAM
 # PadFunction: IO_L8P_T1_AD14P_35 
@@ -32,8 +31,6 @@ set_property -dict { PACKAGE_PIN T9    IOSTANDARD LVCMOS33 } [get_ports { reset_
 # set_property IOSTANDARD LVCMOS25 [get_ports {tg_compare_error}]
 # set_property PACKAGE_PIN B2 [get_ports {tg_compare_error}]
 
-set_property -dict {PACKAGE_PIN V15 IOSTANDARD LVCMOS33} [get_ports reset_led_o]
-set_property -dict {PACKAGE_PIN U16 IOSTANDARD LVCMOS33} [get_ports reset_core_clk_o]
 
 set_property INTERNAL_VREF  0.675 [get_iobanks 34]
 
