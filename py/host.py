@@ -178,6 +178,9 @@ def _verify_command(app: HostApp, args):
     app.verify(args.file)
     app.print_summary_statistics()
 
+def _listen_command(app: HostApp, args):
+    app.listen_perpetually(verbose=False)
+
 if __name__ == "__main__":
     root_parser = argparse.ArgumentParser()
     root_parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4', help='Serial port (full path or name)')
@@ -200,6 +203,9 @@ if __name__ == "__main__":
     verify_parser = command_parsers.add_parser("verify")
     verify_parser.add_argument('file', help="NBF-formatted file to load")
     verify_parser.set_defaults(handler=_verify_command)
+
+    listen_parser = command_parsers.add_parser("listen")
+    listen_parser.set_defaults(handler=_listen_command)
 
     args = root_parser.parse_args()
 
