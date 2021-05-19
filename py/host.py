@@ -45,10 +45,10 @@ def _log(domain: LogDomain, message: str):
     tqdm.write(domain.message_prefix + " " + message)
 
 class HostApp:
-    def __init__(self, serial_port_name: str):
+    def __init__(self, serial_port_name: str, serial_port_baud: int):
         self.port = serial.Serial(
             port=serial_port_name,
-            baudrate=115200,
+            baudrate=serial_port_baud,
             bytesize=serial.EIGHTBITS,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
@@ -93,6 +93,7 @@ class HostApp:
         if not command.is_correct_reply(reply):
             self.reply_violations += 1
             _log(LogDomain.REPLY, f'Unexpected reply: {command} -> {reply}')
+            # TODO: abort on invalid reply?
 
     def load_file(self, source_file: str, ignore_unfreezes: bool = False):
         file = NbfFile(source_file)
@@ -178,9 +179,13 @@ def _verify_command(app: HostApp, args):
     app.verify(args.file)
     app.print_summary_statistics()
 
+def _listen_command(app: HostApp, args):
+    app.listen_perpetually(verbose=False)
+
 if __name__ == "__main__":
     root_parser = argparse.ArgumentParser()
     root_parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4', help='Serial port (full path or name)')
+    root_parser.add_argument('-b', '--baud', dest='baud_rate', type=int, default=115200, help='Serial port baud rate')
 
     command_parsers = root_parser.add_subparsers(dest="command")
     command_parsers.required = True
@@ -201,9 +206,12 @@ if __name__ == "__main__":
     verify_parser.add_argument('file', help="NBF-formatted file to load")
     verify_parser.set_defaults(handler=_verify_command)
 
+    listen_parser = command_parsers.add_parser("listen")
+    listen_parser.set_defaults(handler=_listen_command)
+
     args = root_parser.parse_args()
 
-    app = HostApp(serial_port_name=args.port)
+    app = HostApp(serial_port_name=args.port, serial_port_baud=args.baud_rate)
     try:
         args.handler(app, args)
     except KeyboardInterrupt:
