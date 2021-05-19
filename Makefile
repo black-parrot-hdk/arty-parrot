@@ -20,6 +20,14 @@ prep: prep_lite
 prep_bsg: prep
 	$(MAKE) -C $(BP_RTL_DIR) tools_bsg
 
+.PHONY: gen_proj
+gen_proj:
+	cd proj && vivado -mode batch -source fpga_host_test.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir ./
+
+.PHONY: clean_proj
+clean_proj:
+	cd proj && rm -r fpga_bp
+
 ## This target just wipes the whole repo clean.
 #  Use with caution.
 bleach_all:
