@@ -8,9 +8,10 @@ OPCODE_FENCE = 0xfe
 OPCODE_FINISH = 0xff
 
 # device -> host
+OPCODE_FINISH = 0x80
 OPCODE_PUTCH = 0x82
 
-ADDRESS_CSR_FREEZE = 0x0000200002
+# CSR addresses
 ADDRESS_CSR_FREEZE = 0x0000200002
 
 # addresses are 40-bit by default

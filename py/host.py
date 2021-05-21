@@ -7,7 +7,7 @@ from typing import Optional
 import serial
 from tqdm import tqdm
 
-from nbf import NBF_COMMAND_LENGTH_BYTES, NbfCommand, NbfFile, OPCODE_PUTCH, OPCODE_READ_8, OPCODE_WRITE_8, ADDRESS_CSR_FREEZE
+from nbf import NBF_COMMAND_LENGTH_BYTES, NbfCommand, NbfFile, OPCODE_FINISH, OPCODE_PUTCH, OPCODE_READ_8, OPCODE_WRITE_8, ADDRESS_CSR_FREEZE
 
 DRAM_REGION_START = 0x00_8000_0000
 DRAM_REGION_END = 0x10_0000_0000
@@ -128,6 +128,11 @@ class HostApp:
                 continue
 
             _log(LogDomain.RECEIVE, _debug_format_message(message))
+
+            if message.opcode == OPCODE_FINISH:
+                print(f"FINISH: core {message.address_int}, code {message.data_int}")
+                # TODO: this assumes unicore
+                return
 
     def verify(self, reference_file: str):
         file = NbfFile(reference_file)
