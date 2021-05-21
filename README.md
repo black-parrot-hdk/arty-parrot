@@ -43,7 +43,7 @@ Otherwise, you can manually invoke Vivado. In a terminal, `cd` into the `proj/` 
 the following:
 
 ```
-vivado -mode batch -source ./fpga_bp.tcl -tclargs --blackparrot_dir ../path/to/black-parrot --arty_dir ../../
+vivado -mode batch -source ./fpga_bp.tcl -tclargs --blackparrot_dir ../path/to/black-parrot --arty_dir ../
 ```
 
 Once the project has been generated, open the `proj/fpga_bp/fpga_bp.xpr` project in the Vivado GUI.
