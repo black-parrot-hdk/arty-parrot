@@ -10,7 +10,7 @@ The top-level README and accompanying Makefile automate the necessary steps; che
 However, if you would like to generate the project without the Makefile (e.g., on Windows), do the
 following:
 * If necessary for your host OS, source Vivado settings64.sh from the command prompt
-* Run `vivado -mode batch -source fpga_host_test.tcl -tclargs --blackparrot_dir <path> --arty_dir <path>`
+* Run `vivado -mode batch -source fpga_bp.tcl -tclargs --blackparrot_dir <path> --arty_dir <path>`
     * The `--blackparrot_dir` argument is the base folder for BlackParrot repo without the trailing
       slash. This repo includes the black-parrot repo as a submodule under the folder name `rtl`;
       you should provide the path to that directory.

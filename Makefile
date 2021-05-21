@@ -22,7 +22,7 @@ prep_bsg: prep
 
 .PHONY: gen_proj
 gen_proj:
-	cd proj && vivado -mode batch -source fpga_host_test.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir ./
+	cd proj && vivado -mode batch -source fpga_bp.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir ../
 
 .PHONY: clean_proj
 clean_proj:
