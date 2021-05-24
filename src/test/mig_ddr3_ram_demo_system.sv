@@ -1,4 +1,4 @@
-`include "bp_fpga_wrapper_interface.svh"
+`include "bp_mig_ddr3_ram_interface.svh"
 
 module mig_ddr3_ram_demo_system
   import bp_common_pkg::*;

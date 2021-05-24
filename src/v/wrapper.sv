@@ -1,4 +1,4 @@
-`include "bp_fpga_wrapper_interface.svh"
+`include "bp_mig_ddr3_ram_interface.svh"
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 

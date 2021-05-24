@@ -1,4 +1,4 @@
-`include "bp_fpga_wrapper_interface.svh"
+`include "bp_mig_ddr3_ram_interface.svh"
 `include "bp_common_defines.svh"
 `include "bp_common_aviary_defines.svh"
 

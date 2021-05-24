@@ -1,5 +1,5 @@
-`ifndef BP_FPGA_WRAPPER_INTERFACE_SVH
-`define BP_FPGA_WRAPPER_INTERFACE_SVH
+`ifndef BP_MIG_DDR3_RAM_INTERFACE_SVH
+`define BP_MIG_DDR3_RAM_INTERFACE_SVH
 
 // Expands to define all ports necessary for the native DDR3 interface which can be passed to MIG components.
 // No leading or trailing commas are included.
