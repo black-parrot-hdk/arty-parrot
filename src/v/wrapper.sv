@@ -81,7 +81,7 @@ module wrapper
        ,.core_clk_o(core_clk_lo)
       );
 
-    
+
     // Synchronizer for core clock reset
     logic reset_core_clk_lo;
     bsg_dff_chain
