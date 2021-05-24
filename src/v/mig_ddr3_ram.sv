@@ -39,7 +39,9 @@ module mig_ddr3_ram
 
     // The below must match parameters provided to MIG
     localparam axi_id_width_p = 4;
-    localparam axi_addr_width_p = 64;
+    // TODO: Memory addresses are truncated to 28 bits, which implicitly handles the
+    // offset from 0x8000_0000. Explicitly apply this offset instead.
+    localparam axi_addr_width_p = 28;
     localparam axi_data_width_p = 128;
     localparam axi_burst_len_p = 4;
 
