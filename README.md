@@ -2,7 +2,19 @@
 
 BlackParrot on the Arty series of Xilinx FPGA dev boards.
 
-Currently, this repo supports only the Arty A7-100T. Support for other variants is anticipated.
+Currently, this repo supports only the Arty A7-100T. Support for other variants is anticipated, and
+would likely be straightforward for other members of the Arty family.
+
+Supported features:
+- Unicore BlackParrot configuration (`e_bp_unicore_l1_tiny_cfg`)
+- 256MB DDR3 RAM on-board
+- Loading arbitrary programs at runtime via NBF interface
+- Printing to host console
+
+Not supported (yet!):
+- Multicore configurations
+- Interactive console input
+- Other on-board I/O such as switches and LEDs
 
 ## Repo structure
 
@@ -79,6 +91,8 @@ First, make sure you have:
     - _TODO: provide instructons._ You need a file which _includes_ zeroes and ideally ends with an
       "unfreeze".
 
+Begin by resetting the board using the button labeled "RESET".
+
 To load a program, you will use the `host.py` script provided in this repo. The most straightforward
 usage is as follows:
 
@@ -89,6 +103,19 @@ usage is as follows:
 The script will execute the provided `hello_world.nbf`, which loads the program into memory and then
 unfreezes the core to begin execution. The host will listen for incoming commands, such as character
 prints, until the program reports completion.
+
+If you run the above using the provided `hello_world.nbf`, you should see the following:
+
+```
+loading nbf: 100%|███████████████████████| 350/350 [00:05<00:00, 62.48it/s]
+[CMD  ] Load complete
+[CMD  ]  Sent:     350 commands
+[CMD  ]  Received: 350 commands
+[CMD  ] Listening for incoming messages...
+Hello world!
+[RX   ] 80_0000000000_0000000000000000
+FINISH: core 0, code 0
+```
 
 For more details on the usage of `host.py`, refer to its `--help` page.
 
