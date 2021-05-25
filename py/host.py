@@ -197,7 +197,7 @@ if __name__ == "__main__":
     command_parsers = root_parser.add_subparsers(dest="command")
     command_parsers.required = True
 
-    load_parser = command_parsers.add_parser("load")
+    load_parser = command_parsers.add_parser("load", help="Stream a file of NBF commands to the target")
     load_parser.add_argument('file', help="NBF-formatted file to load")
     load_parser.add_argument('--no-unfreeze', action='store_true', dest='no_unfreeze', help='Suppress any "unfreeze" commands in the input file')
     load_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
@@ -205,15 +205,15 @@ if __name__ == "__main__":
     # TODO: add --verbose which prints all sent and received commands
     load_parser.set_defaults(handler=_load_command)
 
-    unfreeze_parser = command_parsers.add_parser("unfreeze")
+    unfreeze_parser = command_parsers.add_parser("unfreeze", help="Send an \"unfreeze\" command to the target")
     unfreeze_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
     unfreeze_parser.set_defaults(handler=_unfreeze_command)
 
-    verify_parser = command_parsers.add_parser("verify")
+    verify_parser = command_parsers.add_parser("verify", help="Read back the results of an NBF file's memory writes and confirm that their values match the original file")
     verify_parser.add_argument('file', help="NBF-formatted file to load")
     verify_parser.set_defaults(handler=_verify_command)
 
-    listen_parser = command_parsers.add_parser("listen")
+    listen_parser = command_parsers.add_parser("listen", help="Watch for incoming messages and print the received data")
     listen_parser.set_defaults(handler=_listen_command)
 
     args = root_parser.parse_args()
