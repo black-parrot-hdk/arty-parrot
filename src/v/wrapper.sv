@@ -1,4 +1,4 @@
-`include "bp_fpga_wrapper_interface.svh"
+`include "bp_mig_ddr3_ram_interface.svh"
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
@@ -81,7 +81,7 @@ module wrapper
        ,.core_clk_o(core_clk_lo)
       );
 
-    
+
     // Synchronizer for core clock reset
     logic reset_core_clk_lo;
     bsg_dff_chain

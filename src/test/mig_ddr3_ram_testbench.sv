@@ -3,17 +3,6 @@
 `include "bp_common_defines.svh"
 `include "bp_common_aviary_defines.svh"
 
-// Below macros copied from external/basejump_stl/bsg_cache/bsg_cache_pkg.v
-// TODO: fix
-`define declare_bsg_cache_dma_pkt_s(addr_width_mp) \
-  typedef struct packed {               \
-    logic write_not_read;               \
-    logic [addr_width_mp-1:0] addr;     \
-  } bsg_cache_dma_pkt_s
-
-`define bsg_cache_dma_pkt_width(addr_width_mp)    \
-  (1+addr_width_mp)
-
 module mig_ddr3_ram_testbench
     import bp_common_pkg::*;
     import bsg_cache_pkg::*;

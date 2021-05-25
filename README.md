@@ -2,15 +2,27 @@
 
 BlackParrot on the Arty series of Xilinx FPGA dev boards.
 
-Currently, this repo supports only the Arty A7-100T. Support for other variants is anticipated.
+Currently, this repo supports only the Arty A7-100T. Support for other variants is anticipated, and
+would likely be straightforward for other members of the Arty family.
+
+Supported features:
+- Unicore BlackParrot configuration (`e_bp_unicore_l1_tiny_cfg`)
+- 256MB DDR3 RAM on-board
+- Loading arbitrary programs at runtime via NBF interface
+- Printing to host console
+
+Not supported (yet!):
+- Multicore configurations
+- Interactive console input
+- Other on-board I/O such as switches and LEDs
 
 ## Repo structure
 
-TODO
-
-### "external" simulation files
-
-TODO
+- `common/`: Board definition files and template constraints files for the Arty A7-100T.
+- `proj/`: tcl script and accompanying IP configurations for generating a Vivado project.
+- `py/`: Python scripts for interacting with a board over the USB serial interface.
+- `src/`: RTL for the arty-parrot-specific host components in the design.
+- `test/`: Some sample NBF files.
 
 ## Usage
 
@@ -72,13 +84,40 @@ code into memory of the BlackParrot system and then initiates execution from tha
 
 First, make sure you have:
 
-- Python 3.6 or above
+- Python 3.8 or above
     - `pyserial` and `tqdm` installed (`python3 -m pip install pyserial tqdm`)
 - A USB cable connected to the MicroUSB port of the Arty A7
-- A .nbf file describing the program to load. _TODO: provide instructons._
+- A .nbf file describing the program to load.
+    - _TODO: provide instructons._ You need a file which _includes_ zeroes and ideally ends with an
+      "unfreeze".
 
-To load a program, you will use the `host.py` script provided in this repo.
+Begin by resetting the board using the button labeled "RESET".
 
+To load a program, you will use the `host.py` script provided in this repo. The most straightforward
+usage is as follows:
+
+```
+./py/host.py -p <serial port name> load .\test\hello_world.nbf --listen
+```
+
+The script will execute the provided `hello_world.nbf`, which loads the program into memory and then
+unfreezes the core to begin execution. The host will listen for incoming commands, such as character
+prints, until the program reports completion.
+
+If you run the above using the provided `hello_world.nbf`, you should see the following:
+
+```
+loading nbf: 100%|███████████████████████| 350/350 [00:05<00:00, 62.48it/s]
+[CMD  ] Load complete
+[CMD  ]  Sent:     350 commands
+[CMD  ]  Received: 350 commands
+[CMD  ] Listening for incoming messages...
+Hello world!
+[RX   ] 80_0000000000_0000000000000000
+FINISH: core 0, code 0
+```
+
+For more details on the usage of `host.py`, refer to its `--help` page.
 
 ## Debugging with Xilinx Integrated Logic Analyzer
 
@@ -98,3 +137,10 @@ Apply patch for clocks. Mark any signals of interest. Then:
 1. **VERY important:** Use the menu or <kbd>Ctrl</kbd>+<kbd>S</kbd> to save your changes. If warned about synthesis going out-of-date, dismiss the dialog. In the "Save Constraints" window, Select "Create a new file" and give it a name like `debug_constraints.xdc`. Press "OK".
 
 Now run Synthesis and then Implementation, and once complete, generate a bitstream and program the device as desired. It will automatically open the ILA viewer when you program the board.
+
+## Simulations
+
+Currently, the simulations in this repo don't cover the BlackParrot core, and instead focus on the
+arty-parrot custom modules and integration. The simulations use Vivado's built-in XSim, which can be
+activated via the "Run Simulation" button in the Vivado GUI. Note that, to simulate designs which
+include the memory controller, you must do some manual setup; see `src/external/README.md`.
