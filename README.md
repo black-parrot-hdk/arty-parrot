@@ -83,7 +83,7 @@ files to include.
 
 #### Synthesis and loading onto the board
 
-**Option 1:** `generate\_project.tcl`
+**Option 1:** `generate\_bitstream.tcl`
 
 On a Linux host, run synthesis, implementation, and bitstream generation with the following command:
 
