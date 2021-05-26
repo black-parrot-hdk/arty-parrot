@@ -40,6 +40,14 @@ possible but not currently implemented.
 The project in this repo targets Vivado 2019.1 by default. However, automatically upgrading to a
 more recent version is possible. Instructions for doing so are planned.
 
+### Getting Started with Arty A7
+
+We suggest following the [instructions](https://reference.digilentinc.com/programmable-logic/arty-a7/start)
+provided by Digilent to setup Vivado for use with the Arty A7 boards.
+
+In particular, it may help to install the Arty A7 board files as described in Step 3 of
+["Installing Vivado and Digilent Board Files"](https://reference.digilentinc.com/vivado/installing-vivado/start).
+
 ### Opening in Vivado and running synthesis
 
 Clone this repo, including submodules:
@@ -51,6 +59,8 @@ cd arty-parrot
 
 #### Generate the project
 
+Source the Vivado settings script for your machine. On Linux this is called `settings64.sh`.
+
 If you are on a Linux host, generate the project using the following command:
 
 ```
@@ -61,19 +71,29 @@ Otherwise, you can manually invoke Vivado. In a terminal, `cd` into the `proj/` 
 the following:
 
 ```
-vivado -mode batch -source ./fpga_bp.tcl -tclargs --blackparrot_dir ../path/to/black-parrot --arty_dir ../
+vivado -mode batch -source ./generate_project.tcl -tclargs --blackparrot_dir ../path/to/black-parrot --arty_dir ../
 ```
 
-Once the project has been generated, open the `proj/fpga_bp/fpga_bp.xpr` project in the Vivado GUI.
+Once the project has been generated, open the `proj/arty-parrot/arty-parrot.xpr` project in the Vivado GUI.
 
 If you introduce new BlackParrot files or reference a different version of the BlackParrot RTL, you
-will have to either manually modify the files included in the project or delete the `fpga_bp`
+will have to either manually modify the files included in the project or delete the `arty-parrot`
 directory and re-run the above. Re-generating the project automatically discovers the appropriate
 files to include.
 
 #### Synthesis and loading onto the board
 
-Synthesis, implementation and bitstream generation work out-of-the-box. Click the respective steps
+**Option 1:** `generate\_project.tcl`
+
+On a Linux host, run synthesis, implementation, and bitstream generation with the following command:
+
+```
+make gen_bit
+```
+
+**Option 2:** Vivado GUI
+
+Synthesis, implementation and bitstream generation should work out-of-the-box. Click the respective steps
 in the left pane of the Vivado GUI to launch the corresponding task runs.
 
 Similarly, once you have generated a bitstream, opening the Hardware Manager with the Arty board
@@ -97,7 +117,7 @@ First, make sure you have:
     - _TODO: provide instructons._ You need a file which _includes_ zeroes and ideally ends with an
       "unfreeze".
 
-Begin by resetting the board using the button labeled "RESET".
+Begin by resetting the board using the red button labeled "RESET".
 
 To load a program, you will use the `host.py` script provided in this repo. The most straightforward
 usage is as follows:

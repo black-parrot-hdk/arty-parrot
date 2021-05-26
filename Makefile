@@ -1,13 +1,21 @@
 TOP ?= $(shell git rev-parse --show-toplevel)
 
-export BP_SDK_DIR := $(TOP)/sdk
-export BP_RTL_DIR := $(TOP)/rtl
+export BP_SDK_DIR ?= $(TOP)/sdk
+export BP_RTL_DIR ?= $(TOP)/rtl
 
-.PHONY: prep prep_bsg bleach_all
+JOBS ?= 8
+PROJECT_DIR ?= $(TOP)/proj/arty-parrot
 
-checkout:
-	cd $(TOP); git submodule update --init --recursive --checkout $(BP_RTL_DIR)
+.PHONY: prep prep_lite prep_bsg bleach_all checkout checkout_sdk checkout_rtl
+.PHONY: gen_proj gen_bit clean_proj
+
+checkout_sdk:
 	cd $(TOP); git submodule update --init --recursive --checkout $(BP_SDK_DIR)
+
+checkout_rtl:
+	cd $(TOP); git submodule update --init --recursive --checkout $(BP_RTL_DIR)
+
+checkout: checkout_rtl checkout_sdk
 
 prep_lite: checkout
 	$(MAKE) -C $(BP_RTL_DIR) tools_lite
@@ -20,13 +28,17 @@ prep: prep_lite
 prep_bsg: prep
 	$(MAKE) -C $(BP_RTL_DIR) tools_bsg
 
-.PHONY: gen_proj
 gen_proj:
-	cd proj && vivado -mode batch -source fpga_bp.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir ../
+	cd proj && vivado -mode batch -source generate_project.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir $(TOP)
 
-.PHONY: clean_proj
+gen_bit: | $(PROJECT_DIR)
+	cd proj && vivado -mode batch -source generate_bitstream.tcl -tclargs --jobs $(JOBS)
+
 clean_proj:
-	cd proj && rm -r fpga_bp
+	cd proj && rm -rf $(PROJECT_DIR) && rm -f *.jou *.log
+
+$(PROJECT_DIR):
+	$(error $(PROJECT_DIR) required to generate bitstream)
 
 ## This target just wipes the whole repo clean.
 #  Use with caution.

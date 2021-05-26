@@ -24,7 +24,7 @@ module uart_rx
     , output logic [data_bits_p-1:0] rx_o
     , output logic rx_error_o
     );
-    
+
     typedef enum logic [2:0] {
         e_reset
         , e_idle
@@ -35,21 +35,21 @@ module uart_rx
         , e_finish
     } state_e;
     state_e rx_state_r, rx_state_n;
-    
+
     logic [`BSG_SAFE_CLOG2(clk_per_bit_p+1)-1:0] clk_cnt_r, clk_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] data_cnt_r, data_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] parity_cnt_r, parity_cnt_n;
-    
+
     logic data_in_r, data_in_n;
     logic data_r, data_n;
     // start bit is low
     wire rx_start = (data_r == 1'b0);
     // stop bit is high
     wire rx_stop = (data_r == 1'b1);
-    
+
     logic [data_bits_p-1:0] rx_data_r, rx_data_n;
     logic rx_v_r, rx_v_n;
-    
+
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
             rx_state_r <= e_reset;
@@ -71,22 +71,22 @@ module uart_rx
             parity_cnt_r <= parity_cnt_n;
         end
     end
-    
+
     always_comb begin
         // state
         rx_state_n = rx_state_r;
-        
+
         // outputs
         rx_o = rx_data_r;
         rx_v_o = rx_v_r;
         rx_error_o = 1'b0;
-        
+
         // input and data buffering
         // rx_i -> data_in_r -> data_r
         data_in_n = rx_i;
         data_n = data_in_r;
         parity_cnt_n = parity_cnt_r;
-        
+
         // rx valid and data registers
         rx_v_n = rx_v_r;
         rx_data_n = rx_data_r;
@@ -94,7 +94,7 @@ module uart_rx
         // clock and data counters
         clk_cnt_n = clk_cnt_r;
         data_cnt_n = data_cnt_r;
-        
+
         case (rx_state_r)
             e_reset: begin
                 rx_state_n = e_idle;
@@ -183,9 +183,9 @@ module uart_rx
                 parity_cnt_n = '0;
             end
             default: begin
-                rx_state_n = e_reset; 
+                rx_state_n = e_reset;
             end
         endcase
     end
-    
+
 endmodule

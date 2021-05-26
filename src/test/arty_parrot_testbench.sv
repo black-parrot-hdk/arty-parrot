@@ -4,10 +4,10 @@
 `include "bp_common_aviary_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
-module wrapper_testbench
+module arty_parrot_testbench
     import bp_common_pkg::*;
     import bsg_cache_pkg::*;
-  import bp_fpga_host_pkg::*;
+    import bp_fpga_host_pkg::*;
 
     #(parameter bp_params_e bp_params_p = e_bp_unicore_l1_tiny_cfg
       `declare_bp_proc_params(bp_params_p)
@@ -74,7 +74,7 @@ module wrapper_testbench
     wire master_reset_active_low_i = !master_reset_i;
 
     logic device_uart_rx_li, device_uart_tx_lo;
-    wrapper
+    arty_parrot
         #(.bp_params_p(bp_params_p)
           ,.uart_clk_per_bit_p(uart_core_clk_per_bit_p)
           )
@@ -174,7 +174,7 @@ module wrapper_testbench
         );
 
     wire clk = master_clk_100mhz_i;
-    wire reset = master_reset_i; 
+    wire reset = master_reset_i;
 
     integer jj = 0;
     task send_nbf (input bp_fpga_host_nbf_s nbf_i);

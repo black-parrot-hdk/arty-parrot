@@ -25,7 +25,7 @@ module uart_tx
     // raised for 1 cycle when transmit complete
     , output logic tx_done_o
     );
-        
+
     typedef enum logic [2:0] {
         e_reset
         , e_idle
@@ -35,17 +35,17 @@ module uart_tx
         , e_stop_bit
     } state_e;
     state_e tx_state_r, tx_state_n;
-    
+
     logic [`BSG_SAFE_CLOG2(clk_per_bit_p+1)-1:0] clk_cnt_r, clk_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] data_cnt_r, data_cnt_n;
     logic [`BSG_SAFE_CLOG2(data_bits_p)-1:0] parity_cnt_r, parity_cnt_n;
-    
+
     // transmit LSB->MSB
     logic [data_bits_p-1:0] tx_data_r, tx_data_n;
     logic tx_r, tx_n;
     logic tx_v_r, tx_v_n;
     logic tx_done_r, tx_done_n;
-    
+
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
             tx_state_r <= e_reset;
@@ -68,27 +68,27 @@ module uart_tx
             parity_cnt_r <= parity_cnt_n;
         end
     end
-    
+
     assign tx_o = tx_r;
     assign tx_v_o = tx_v_r;
     assign tx_done_o = tx_done_r;
-    
+
     always_comb begin
         // state
         tx_state_n = tx_state_r;
-        
+
         tx_data_n = tx_data_r;
         tx_n = tx_r;
         tx_v_n = tx_v_r;
         tx_done_n = tx_done_r;
         parity_cnt_n = parity_cnt_r;
-        
+
         clk_cnt_n = clk_cnt_r;
         data_cnt_n = data_cnt_r;
-        
+
         // outputs
         tx_ready_and_o = '0;
-        
+
         case (tx_state_r)
             e_reset: begin
                 tx_state_n = e_idle;
@@ -218,5 +218,5 @@ module uart_tx
             end
         endcase
     end
-        
+
 endmodule

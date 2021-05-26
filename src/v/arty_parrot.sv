@@ -2,7 +2,7 @@
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
-module wrapper
+module arty_parrot
   import bp_common_pkg::*;
   import bp_me_pkg::*;
   import bp_fpga_host_pkg::*;
@@ -67,7 +67,7 @@ module wrapper
 
     // Reset generation
     // We reset the clock gen MMCM on the rising edge of the incoming reset only; this allows the
-    // clock to start running again and downstream clocked modules to "see" the reset subsequently. 
+    // clock to start running again and downstream clocked modules to "see" the reset subsequently.
     logic last_reset_sys_clk_r, clock_reset_sys_clk_r;
     always_ff @(posedge sys_clk_lo) begin
       last_reset_sys_clk_r <= reset_sys_clk_lo;
@@ -99,7 +99,7 @@ module wrapper
     bp_bedrock_io_mem_msg_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
     logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
     logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
-    
+
     // from FPGA Host
     bp_bedrock_io_mem_msg_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
     logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;

@@ -340,5 +340,5 @@ module bp_fpga_host_io_in
       default: begin end
     endcase // state_r
   end // always_comb
- 
+
 endmodule

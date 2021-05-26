@@ -10,7 +10,7 @@ module mig_ddr3_ram
      `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, cce)
       ,localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(caddr_width_p)
       )
-    // 100MHz master clock, used only for RAM
+    // 100MHz primary clock, used only for RAM
     (input logic sys_clk_i
     ,input logic reset_sys_clk_i
     // 200MHz reference clock, used only for RAM
@@ -192,7 +192,7 @@ module mig_ddr3_ram
          ,.app_ref_ack                    (app_ref_ack_lo)
          ,.app_zq_ack                     (app_zq_ack_lo)
 
-         // AXI Slave Interface Write Address Ports
+         // AXI S Interface Write Address Ports
          ,.s_axi_awid                     (axi_awid_ui_clk_li)
          ,.s_axi_awaddr                   (axi_awaddr_ui_clk_li)
          ,.s_axi_awlen                    (axi_awlen_ui_clk_li)
@@ -205,20 +205,20 @@ module mig_ddr3_ram
          ,.s_axi_awvalid                  (axi_awvalid_ui_clk_li)
          ,.s_axi_awready                  (axi_awready_ui_clk_lo)
 
-         // AXI Slave Interface Write Data Ports
+         // AXI S Interface Write Data Ports
          ,.s_axi_wdata                    (axi_wdata_ui_clk_li)
          ,.s_axi_wstrb                    (axi_wstrb_ui_clk_li)
          ,.s_axi_wlast                    (axi_wlast_ui_clk_li)
          ,.s_axi_wvalid                   (axi_wvalid_ui_clk_li)
          ,.s_axi_wready                   (axi_wready_ui_clk_lo)
 
-         // Slave Interface Write Response Ports
+         // AXI S Interface Write Response Ports
          ,.s_axi_bid                      (axi_bid_ui_clk_lo)
          ,.s_axi_bresp                    (axi_bresp_ui_clk_lo)
          ,.s_axi_bvalid                   (axi_bvalid_ui_clk_lo)
          ,.s_axi_bready                   (axi_bready_ui_clk_li)
 
-         // AXI Slave Interface Read Address Ports
+         // AXI S Interface Read Address Ports
          ,.s_axi_arid                     (axi_arid_ui_clk_li)
          ,.s_axi_araddr                   (axi_araddr_ui_clk_li)
          ,.s_axi_arlen                    (axi_arlen_ui_clk_li)
@@ -231,7 +231,7 @@ module mig_ddr3_ram
          ,.s_axi_arvalid                  (axi_arvalid_ui_clk_li)
          ,.s_axi_arready                  (axi_arready_ui_clk_lo)
 
-         // Slave Interface Read Data Ports
+         // AXI S Interface Read Data Ports
          ,.s_axi_rid                      (axi_rid_ui_clk_lo)
          ,.s_axi_rdata                    (axi_rdata_ui_clk_lo)
          ,.s_axi_rresp                    (axi_rresp_ui_clk_lo)
@@ -253,16 +253,16 @@ module mig_ddr3_ram
          );
 
     axi_memory_clock_converter clock_crossing
-        // Clocking for the master interface (to DRAM)
+        // Clocking for the AXI M interface (to DRAM)
         (.m_axi_aclk     (ui_clk_lo)
          ,.m_axi_aresetn (reset_ui_clk_active_low_li)
 
-         // Clocking for the slave interface (from core/cache DMA translator)
+         // Clocking for the AXI S interface (from core/cache DMA translator)
          ,.s_axi_aclk     (core_clk_i)
          ,.s_axi_aresetn  (reset_core_clk_active_low_li)
 
-         // Master bus
-         // AXI Slave Interface Write Address Ports
+         // AXI M bus
+         // AXI M Interface Write Address Ports
          ,.m_axi_awid                     (axi_awid_ui_clk_li)
          ,.m_axi_awaddr                   (axi_awaddr_ui_clk_li)
          ,.m_axi_awlen                    (axi_awlen_ui_clk_li)
@@ -276,20 +276,20 @@ module mig_ddr3_ram
          ,.m_axi_awready                  (axi_awready_ui_clk_lo)
          ,.m_axi_awregion                 (axi_awregion_core_clk_li)
 
-         // AXI Slave Interface Write Data Ports
+         // AXI M Interface Write Data Ports
          ,.m_axi_wdata                    (axi_wdata_ui_clk_li)
          ,.m_axi_wstrb                    (axi_wstrb_ui_clk_li)
          ,.m_axi_wlast                    (axi_wlast_ui_clk_li)
          ,.m_axi_wvalid                   (axi_wvalid_ui_clk_li)
          ,.m_axi_wready                   (axi_wready_ui_clk_lo)
 
-         // Slave Interface Write Response Ports
+         // AXI M Interface Write Response Ports
          ,.m_axi_bid                      (axi_bid_ui_clk_lo)
          ,.m_axi_bresp                    (axi_bresp_ui_clk_lo)
          ,.m_axi_bvalid                   (axi_bvalid_ui_clk_lo)
          ,.m_axi_bready                   (axi_bready_ui_clk_li)
 
-         // AXI Slave Interface Read Address Ports
+         // AXI M Interface Read Address Ports
          ,.m_axi_arid                     (axi_arid_ui_clk_li)
          ,.m_axi_araddr                   (axi_araddr_ui_clk_li)
          ,.m_axi_arlen                    (axi_arlen_ui_clk_li)
@@ -303,7 +303,7 @@ module mig_ddr3_ram
          ,.m_axi_arready                  (axi_arready_ui_clk_lo)
          ,.m_axi_arregion                 (axi_arregion_core_clk_li)
 
-         // Slave Interface Read Data Ports
+         // AXI M Interface Read Data Ports
          ,.m_axi_rid                      (axi_rid_ui_clk_lo)
          ,.m_axi_rdata                    (axi_rdata_ui_clk_lo)
          ,.m_axi_rresp                    (axi_rresp_ui_clk_lo)
@@ -311,8 +311,8 @@ module mig_ddr3_ram
          ,.m_axi_rvalid                   (axi_rvalid_ui_clk_lo)
          ,.m_axi_rready                   (axi_rready_ui_clk_li)
 
-         // Slave bus
-         // AXI Slave Interface Write Address Ports
+         // AXI S bus
+         // AXI S Interface Write Address Ports
          ,.s_axi_awid                     (axi_awid_core_clk_li)
          ,.s_axi_awaddr                   (axi_awaddr_core_clk_li)
          ,.s_axi_awlen                    (axi_awlen_core_clk_li)
@@ -326,20 +326,20 @@ module mig_ddr3_ram
          ,.s_axi_awready                  (axi_awready_core_clk_lo)
          ,.s_axi_awregion                 (4'h0)
 
-         // AXI Slave Interface Write Data Ports
+         // AXI S Interface Write Data Ports
          ,.s_axi_wdata                    (axi_wdata_core_clk_li)
          ,.s_axi_wstrb                    (axi_wstrb_core_clk_li)
          ,.s_axi_wlast                    (axi_wlast_core_clk_li)
          ,.s_axi_wvalid                   (axi_wvalid_core_clk_li)
          ,.s_axi_wready                   (axi_wready_core_clk_lo)
 
-         // Slave Interface Write Response Ports
+         // AXI S Interface Write Response Ports
          ,.s_axi_bid                      (axi_bid_core_clk_lo)
          ,.s_axi_bresp                    (axi_bresp_core_clk_lo)
          ,.s_axi_bvalid                   (axi_bvalid_core_clk_lo)
          ,.s_axi_bready                   (axi_bready_core_clk_li)
 
-         // AXI Slave Interface Read Address Ports
+         // AXI S Interface Read Address Ports
          ,.s_axi_arid                     (axi_arid_core_clk_li)
          ,.s_axi_araddr                   (axi_araddr_core_clk_li)
          ,.s_axi_arlen                    (axi_arlen_core_clk_li)
@@ -353,7 +353,7 @@ module mig_ddr3_ram
          ,.s_axi_arready                  (axi_arready_core_clk_lo)
          ,.s_axi_arregion                 (4'h0)
 
-         // Slave Interface Read Data Ports
+         // AXI S Interface Read Data Ports
          ,.s_axi_rid                      (axi_rid_core_clk_lo)
          ,.s_axi_rdata                    (axi_rdata_core_clk_lo)
          ,.s_axi_rresp                    (axi_rresp_core_clk_lo)
@@ -362,7 +362,7 @@ module mig_ddr3_ram
          ,.s_axi_rready                   (axi_rready_core_clk_li)
         );
 
-    bsg_cache_to_axi 
+    bsg_cache_to_axi
         #(.addr_width_p          (caddr_width_p)
           ,.block_size_in_words_p(cce_block_width_p/dword_width_gp)
           ,.data_width_p         (dword_width_gp)
@@ -374,7 +374,7 @@ module mig_ddr3_ram
           ,.axi_data_width_p     (axi_data_width_p)
           ,.axi_burst_len_p      (axi_burst_len_p)
           )
-        cache_to_axi 
+        cache_to_axi
         (.clk_i   (core_clk_i)
          ,.reset_i(reset_core_clk_i)
 

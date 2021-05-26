@@ -2,7 +2,7 @@ set blackparrot_dir "."
 set arty_dir "."
 
 # Set the project name
-set _xil_proj_name_ "fpga_bp"
+set _xil_proj_name_ "arty-parrot"
 
 # Use project name variable, if specified in the tcl shell
 if { [info exists ::user_project_name] } {
@@ -10,7 +10,7 @@ if { [info exists ::user_project_name] } {
 }
 
 variable script_file
-set script_file "fpga_bp.tcl"
+set script_file "generate_project.tcl"
 
 # Help information for this script
 proc print_help {} {
@@ -136,7 +136,7 @@ set additional_source_files [list \
   [file normalize "${arty_dir}/src/v/bp_fpga_host.sv" ] \
   [file normalize "${arty_dir}/src/v/bp_fpga_host_io_in.sv" ] \
   [file normalize "${arty_dir}/src/v/bp_fpga_host_io_out.sv" ] \
-  [file normalize "${arty_dir}/src/v/wrapper.sv" ] \
+  [file normalize "${arty_dir}/src/v/arty_parrot.sv" ] \
   [file normalize "${arty_dir}/src/v/mig_ddr3_ram.sv" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_demo_system.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
@@ -149,9 +149,9 @@ set xilinx_ip_configurations [list \
   [file normalize "${arty_dir}/proj/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
 ]
 set xilinx_ip_output_dirs [list \
-  [file normalize "${arty_dir}/proj/fpga_bp/generated/mig_7series_0/" ] \
-  [file normalize "${arty_dir}/proj/fpga_bp/generated/dram_clk_gen" ] \
-  [file normalize "${arty_dir}/proj/fpga_bp/generated/axi_memory_clock_converter" ] \
+  [file normalize "${arty_dir}/proj/${_xil_proj_name_}/generated/mig_7series_0/" ] \
+  [file normalize "${arty_dir}/proj/${_xil_proj_name_}/generated/dram_clk_gen" ] \
+  [file normalize "${arty_dir}/proj/${_xil_proj_name_}/generated/axi_memory_clock_converter" ] \
 ]
 
 foreach ip_dir $xilinx_ip_output_dirs {
@@ -197,7 +197,7 @@ foreach ip_file $xilinx_ip_configurations {
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "wrapper" -objects $obj
+set_property -name "top" -value "arty_parrot" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
@@ -232,7 +232,7 @@ set sim_include_dirs [list \
 set sim_source_files [list \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
   [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
-  [file normalize "${arty_dir}/src/test/wrapper_testbench.sv"] \
+  [file normalize "${arty_dir}/src/test/arty_parrot_testbench.sv"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
 ]
@@ -262,7 +262,7 @@ foreach source_file $sim_source_files {
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "wrapper_testbench" -objects $obj
+set_property -name "top" -value "arty_parrot_testbench" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 

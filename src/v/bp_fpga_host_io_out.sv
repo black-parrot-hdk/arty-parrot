@@ -44,14 +44,14 @@ module bp_fpga_host_io_out
     , parameter uart_parity_odd_p = 0 // 0 or 1
 
     , parameter nbf_buffer_els_p = 4
-    
+
     , localparam nbf_uart_packets_lp = (nbf_width_lp / uart_data_bits_p)
 
     , localparam byte_offset_width_lp = 3
     , localparam lg_num_core_lp = `BSG_SAFE_CLOG2(num_core_p)
 
     `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
-    
+
     , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
     , localparam finish_base_addr_gp  = paddr_width_p'(64'h0010_2???)
     , localparam putchar_core_base_addr_gp  = paddr_width_p'(64'h0010_3???)
