@@ -42,11 +42,18 @@ more recent version is possible. Instructions for doing so are planned.
 
 ### Getting Started with Arty A7
 
-We suggest following the [instructions](https://reference.digilentinc.com/programmable-logic/arty-a7/start)
-provided by Digilent to setup Vivado for use with the Arty A7 boards.
+The board manufacturer has resources available [here](https://reference.digilentinc.com/programmable-logic/arty-a7/start)
+which we recommend referencing when working with the board.
 
-In particular, it may help to install the Arty A7 board files as described in Step 3 of
-["Installing Vivado and Digilent Board Files"](https://reference.digilentinc.com/vivado/installing-vivado/start).
+You will need to ensure that your local installation of Vivado is aware of the Arty A7 board and its
+components. If you have not yet installed Vivado, select the Artix-7 family of FPGA parts when asked
+and that should be sufficient. Otherwise, if Vivado reports a failure finding the appropriate board
+or part while following the below instructions, try one of the following options and re-run the
+project generation:
+- Under the "Tools" menu, click "Download Latest Boards..."
+- Re-run the installer and select the Artix-7 family
+- Manually install the Arty A7 board files as described in Step 3 of
+  ["Installing Vivado and Digilent Board Files"](https://reference.digilentinc.com/vivado/installing-vivado/start).
 
 ### Opening in Vivado and running synthesis
 
