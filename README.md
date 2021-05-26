@@ -16,6 +16,12 @@ Not supported (yet!):
 - Interactive console input
 - Other on-board I/O such as switches and LEDs
 
+Other areas for improvement:
+- Ability to save/load program images to/from flash
+- Improve speed of loading large programs over UART interface
+  - Bump the baud rate to the maximum we can reasonably support via standard hosts
+  - Consider supporting reads/writes larger than 8 bytes at a time
+
 ## Repo structure
 
 - `common/`: Board definition files and template constraints files for the Arty A7-100T.
