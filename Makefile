@@ -15,7 +15,9 @@ checkout_sdk:
 checkout_rtl:
 	cd $(TOP); git submodule update --init --recursive --checkout $(BP_RTL_DIR)
 
-checkout: checkout_rtl checkout_sdk
+checkout:
+	$(MAKE) checkout_rtl
+	$(MAKE) checkout_sdk
 
 prep_lite: checkout
 	$(MAKE) -C $(BP_RTL_DIR) tools_lite
