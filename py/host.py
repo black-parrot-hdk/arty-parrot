@@ -238,7 +238,7 @@ def _listen_command(app: HostApp, args):
 if __name__ == "__main__":
     root_parser = argparse.ArgumentParser()
     root_parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4', help='Serial port (full path or name)')
-    root_parser.add_argument('-b', '--baud', dest='baud_rate', type=int, default=115200, help='Serial port baud rate')
+    root_parser.add_argument('-b', '--baud', dest='baud_rate', type=int, default=2_000_000, help='Serial port baud rate')
 
     command_parsers = root_parser.add_subparsers(dest="command")
     command_parsers.required = True
