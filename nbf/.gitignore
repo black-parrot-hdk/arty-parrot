@@ -1,3 +1,5 @@
 */*.nbf
 */*.mem
+*.nbf
+*.mem
 !samples/*

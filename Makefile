@@ -42,6 +42,14 @@ clean_proj:
 $(PROJECT_DIR):
 	$(error $(PROJECT_DIR) required to generate bitstream)
 
+# USAGE: make gen_nbf_from_elf ELF=path/to/file.riscv
+gen_nbf_from_elf:
+	$(MAKE) -C ./nbf/ gen_nbf_from_sdk ELF=$(ELF)
+
+# USAGE: make gen_nbf_from_sdk SUITE=bp-tests PROG=hello_world
+gen_nbf_from_sdk:
+	$(MAKE) -C ./nbf/ gen_nbf_from_sdk SUITE=$(SUITE) PROG=$(PROG)
+
 ## This target just wipes the whole repo clean.
 #  Use with caution.
 bleach_all:
