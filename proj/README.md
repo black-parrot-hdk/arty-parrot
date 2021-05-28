@@ -17,4 +17,4 @@ following:
     * The `--arty_dir` argument is the base folder of this repository without the trailing slash.
 
 On Windows machines, you may need to use single `/` characters (forward slashes) in the path, and
-use abosulte paths.
+use absolute paths.

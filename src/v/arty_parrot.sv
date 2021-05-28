@@ -13,7 +13,7 @@ module arty_parrot
       , parameter nbf_data_width_p = dword_width_gp
       , localparam nbf_width_lp = `bp_fpga_host_nbf_width(nbf_addr_width_p, nbf_data_width_p)
 
-      , parameter uart_clk_per_bit_p = 174 // 20MHz clock / 115200 Baud
+      , parameter uart_clk_per_bit_p = 10 // 20MHz clock / 2M Baud
       , parameter uart_data_bits_p = 8 // between 5 and 9 bits
       , parameter uart_parity_bit_p = 0 // 0 or 1
       , parameter uart_parity_odd_p = 0 // 0 for even parity, 1 for odd parity

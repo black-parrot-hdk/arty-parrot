@@ -120,17 +120,31 @@ First, make sure you have:
 - Python 3.8 or above
     - `pyserial` and `tqdm` installed (`python3 -m pip install pyserial tqdm`)
 - A USB cable connected to the MicroUSB port of the Arty A7
-- A .nbf file describing the program to load.
-    - _TODO: provide instructons._ You need a file which _includes_ zeroes and ideally ends with an
-      "unfreeze".
+- A RISC-V ELF image you want to run, with appropriate memory layout for BlackParrot
 
-Begin by resetting the board using the red button labeled "RESET".
+Programs are loaded into the arty-parrot system via .nbf (Network Boot Format) command listing
+files. You can generate one either from a standalone ELF or from a sample provided by the
+BlackParrot SDK. We also provide a sample .nbf in `nbf/samples/hello_world.nbf` if you want to start
+with a pre-made file. Otherwise, run one of the following commands, according to the source you
+have:
+
+```bash
+# If you have set up the BlackParrot SDK and want to run a provided program from the SDK
+#   Output will be at: nbf/<SUITE>/<PROG>.riscv.nbf
+make gen_nbf_from_sdk SUITE=bp-tests PROG=hello_world
+# If you have a standalone ELF file
+#   Output will be at: nbf/file.riscv.nbf
+make gen_nbf_from_elf ELF=path/to/file.riscv
+```
+
+Now you can load it onto the board. Begin by resetting the system using the red button labeled
+"RESET".
 
 To load a program, you will use the `host.py` script provided in this repo. The most straightforward
 usage is as follows:
 
 ```
-./py/host.py -p <serial port name> load .\test\hello_world.nbf --listen
+./py/host.py -p <serial port name> load ./nbf/samples/hello_world.nbf --listen
 ```
 
 The script will execute the provided `hello_world.nbf`, which loads the program into memory and then
