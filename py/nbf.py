@@ -161,19 +161,15 @@ class NbfFile:
             for cmd in map(NbfCommand.parse, f):
                 yield cmd
 
-    def try_peek_length(self) -> Optional[int]:
+    def peek_length(self) -> Optional[int]:
         """
-        Reads the file to predict the total number of entries. If more than an
-        internal cutoff are found, returns None. Should only be used as a hint.
+        Reads the file to compute the total expected number of entries.
         """
         LINE_CUTOFF = 10_000
         count = 0
         with open(self.path, mode='r') as f:
             for _ in f:
                 count += 1
-
-                if count > LINE_CUTOFF:
-                    return None
 
         return count
 

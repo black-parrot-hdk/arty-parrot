@@ -139,7 +139,7 @@ class HostApp:
         outstanding_commands_expecting_replies = []
 
         command: NbfCommand
-        for command in tqdm(file, total=file.try_peek_length(), desc="loading nbf"):
+        for command in tqdm(file, total=file.peek_length(), desc="loading nbf"):
             if ignore_unfreezes and command.matches(OPCODE_WRITE_8, ADDRESS_CSR_FREEZE, 0):
                 continue
 
@@ -184,7 +184,7 @@ class HostApp:
         writes_corrupted = 0
 
         command: NbfCommand
-        for command in tqdm(file, total=file.try_peek_length(), desc="verifying nbf"):
+        for command in tqdm(file, total=file.peek_length(), desc="verifying nbf"):
             if command.opcode != OPCODE_WRITE_8:
                 continue
 
