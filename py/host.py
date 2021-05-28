@@ -99,7 +99,7 @@ class HostApp:
             return False
         return True
 
-    def _validate_outstanding_replies(self, command_queue_expecting_replies: list, sliding_window_num_commands: int):
+    def _validate_outstanding_replies(self, command_queue_expecting_replies: list, sliding_window_num_commands: int, log_all_rx: bool = False):
         """
         Reads replies from the incoming data stream, matching them with the provided command queue
         in-order and validating each. If more than "sliding_window_num_commands" commands are in the
@@ -118,13 +118,17 @@ class HostApp:
                 # all queued packets have been processed
                 break
 
+            if log_all_rx:
+                # TODO: indicate this is an expected reply
+                _log(LogDomain.RECEIVE, _debug_format_message(reply))
+
             # TODO: verbose/echo mode
             was_valid = self._validate_reply(sent_command, reply)
             if was_valid:
                 # TODO: consider aborting on invalid reply
                 command_queue_expecting_replies.pop(0)
 
-    def load_file(self, source_file: str, ignore_unfreezes: bool = False, sliding_window_num_commands: int = 0):
+    def load_file(self, source_file: str, ignore_unfreezes: bool = False, sliding_window_num_commands: int = 0, log_all_messages: bool = False):
         file = NbfFile(source_file)
 
         outstanding_commands_expecting_replies = []
@@ -134,13 +138,16 @@ class HostApp:
             if ignore_unfreezes and command.matches(OPCODE_WRITE_8, ADDRESS_CSR_FREEZE, 0):
                 continue
 
+            if log_all_messages:
+                _log(LogDomain.TRANSMIT, _debug_format_message(command))
+
             self._send_message(command)
             if command.expects_reply():
                 outstanding_commands_expecting_replies.append(command)
 
-            self._validate_outstanding_replies(outstanding_commands_expecting_replies, sliding_window_num_commands)
+            self._validate_outstanding_replies(outstanding_commands_expecting_replies, sliding_window_num_commands, log_all_rx=log_all_messages)
 
-        self._validate_outstanding_replies(outstanding_commands_expecting_replies, 0)
+        self._validate_outstanding_replies(outstanding_commands_expecting_replies, 0, log_all_rx=log_all_messages)
         _log(LogDomain.COMMAND, "Load complete")
 
     def unfreeze(self):
@@ -199,11 +206,16 @@ class HostApp:
             _log(LogDomain.COMMAND, "== CORRUPTION DETECTED ==")
 
 def _load_command(app: HostApp, args):
-    app.load_file(args.file, ignore_unfreezes=args.no_unfreeze, sliding_window_num_commands=args.window_size)
+    app.load_file(
+        args.file,
+        ignore_unfreezes=args.no_unfreeze,
+        sliding_window_num_commands=args.window_size,
+        log_all_messages=args.verbose
+    )
     app.print_summary_statistics()
 
     if args.listen:
-        app.listen_perpetually(verbose=False)
+        app.listen_perpetually(verbose=args.verbose)
 
 def _unfreeze_command(app: HostApp, args):
     app.unfreeze()
@@ -230,7 +242,8 @@ if __name__ == "__main__":
     load_parser.add_argument('file', help="NBF-formatted file to load")
     load_parser.add_argument('--no-unfreeze', action='store_true', dest='no_unfreeze', help='Suppress any "unfreeze" commands in the input file')
     load_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
-    load_parser.add_argument('--window-size', type=int, default=20, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking.')
+    load_parser.add_argument('--window-size', type=int, default=20, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking')
+    load_parser.add_argument('--verbose', action='store_true', dest='verbose', help='Log all send and received commands, even if valid')
     # TODO: add --verify which automatically implies --no-unfreeze then manually unfreezes after
     # TODO: add --verbose which prints all sent and received commands
     load_parser.set_defaults(handler=_load_command)
