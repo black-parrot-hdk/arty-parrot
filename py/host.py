@@ -77,9 +77,9 @@ class HostApp:
         else:
             return None
 
-    def _receive_until_opcode(self, opcode: int) -> NbfCommand:
-        message = self._receive_message()
-        while message.opcode != opcode:
+    def _receive_until_opcode(self, opcode: int, block=True) -> Optional[NbfCommand]:
+        message = self._receive_message(block=block)
+        while message is not None and message.opcode != opcode:
             _log(LogDomain.RECEIVE, _debug_format_message(message))
             message = self._receive_message()
 
@@ -91,14 +91,43 @@ class HostApp:
         if self.reply_violations > 0:
             _log(LogDomain.COMMAND, f" Reply violations: {self.reply_violations} commands")
 
-    def _validate_reply(self, command: NbfCommand, reply: NbfCommand):
+    def _validate_reply(self, command: NbfCommand, reply: NbfCommand) -> bool:
         if not command.is_correct_reply(reply):
             self.reply_violations += 1
             _log(LogDomain.REPLY, f'Unexpected reply: {command} -> {reply}')
             # TODO: abort on invalid reply?
+            return False
+        return True
 
-    def load_file(self, source_file: str, ignore_unfreezes: bool = False):
+    def _validate_outstanding_replies(self, command_queue_expecting_replies: list, sliding_window_num_commands: int):
+        """
+        Reads replies from the incoming data stream, matching them with the provided command queue
+        in-order and validating each. If more than "sliding_window_num_commands" commands are in the
+        queue, blocks waiting for an incoming command. Pops all validated commands from the front of
+        the queue, in-place.
+        """
+        while len(command_queue_expecting_replies) > 0:
+            sent_command = command_queue_expecting_replies[0]
+
+            is_window_full = len(command_queue_expecting_replies) > sliding_window_num_commands
+            reply = self._receive_until_opcode(
+                sent_command.opcode,
+                block=is_window_full
+            )
+            if reply is None:
+                # all queued packets have been processed
+                break
+
+            # TODO: verbose/echo mode
+            was_valid = self._validate_reply(sent_command, reply)
+            if was_valid:
+                # TODO: consider aborting on invalid reply
+                command_queue_expecting_replies.pop(0)
+
+    def load_file(self, source_file: str, ignore_unfreezes: bool = False, sliding_window_num_commands: int = 0):
         file = NbfFile(source_file)
+
+        outstanding_commands_expecting_replies = []
 
         command: NbfCommand
         for command in tqdm(file, total=file.try_peek_length(), desc="loading nbf"):
@@ -107,11 +136,11 @@ class HostApp:
 
             self._send_message(command)
             if command.expects_reply():
-                reply = self._receive_until_opcode(command.opcode)
-                # TODO: verbose/echo mode
+                outstanding_commands_expecting_replies.append(command)
 
-                self._validate_reply(command, reply)
+            self._validate_outstanding_replies(outstanding_commands_expecting_replies, sliding_window_num_commands)
 
+        self._validate_outstanding_replies(outstanding_commands_expecting_replies, 0)
         _log(LogDomain.COMMAND, "Load complete")
 
     def unfreeze(self):
@@ -170,7 +199,7 @@ class HostApp:
             _log(LogDomain.COMMAND, "== CORRUPTION DETECTED ==")
 
 def _load_command(app: HostApp, args):
-    app.load_file(args.file, ignore_unfreezes=args.no_unfreeze)
+    app.load_file(args.file, ignore_unfreezes=args.no_unfreeze, sliding_window_num_commands=args.window_size)
     app.print_summary_statistics()
 
     if args.listen:
@@ -201,6 +230,7 @@ if __name__ == "__main__":
     load_parser.add_argument('file', help="NBF-formatted file to load")
     load_parser.add_argument('--no-unfreeze', action='store_true', dest='no_unfreeze', help='Suppress any "unfreeze" commands in the input file')
     load_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
+    load_parser.add_argument('--window-size', type=int, default=20, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking.')
     # TODO: add --verify which automatically implies --no-unfreeze then manually unfreezes after
     # TODO: add --verbose which prints all sent and received commands
     load_parser.set_defaults(handler=_load_command)
