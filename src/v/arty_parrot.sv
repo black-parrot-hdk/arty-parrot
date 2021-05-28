@@ -22,7 +22,6 @@ module arty_parrot
       , parameter io_in_nbf_buffer_els_p = 4
       , parameter io_out_nbf_buffer_els_p = 4
 
-      , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
       , localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(caddr_width_p)
 
       `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
