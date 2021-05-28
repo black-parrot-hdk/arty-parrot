@@ -247,7 +247,7 @@ if __name__ == "__main__":
     load_parser.add_argument('file', help="NBF-formatted file to load")
     load_parser.add_argument('--no-unfreeze', action='store_true', dest='no_unfreeze', help='Suppress any "unfreeze" commands in the input file')
     load_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
-    load_parser.add_argument('--window-size', type=int, default=20, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking')
+    load_parser.add_argument('--window-size', type=int, default=500, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking')
     load_parser.add_argument('--verbose', action='store_true', dest='verbose', help='Log all send and received commands, even if valid')
     # TODO: add --verify which automatically implies --no-unfreeze then manually unfreezes after
     # TODO: add --verbose which prints all sent and received commands
