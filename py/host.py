@@ -54,11 +54,16 @@ class HostApp:
             bytesize=serial.EIGHTBITS,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
-            timeout=1.0
+            # Without a timeout, SIGINT can't end the process while we are blocking on a read.
+            timeout=3.0
         )
         self.commands_sent = 0
         self.commands_received = 0
         self.reply_violations = 0
+
+    def close_port(self):
+        if self.port.is_open:
+            self.port.close()
 
     def _send_message(self, command: NbfCommand):
         self.port.write(command.to_bytes())
@@ -264,6 +269,8 @@ if __name__ == "__main__":
     app = HostApp(serial_port_name=args.port, serial_port_baud=args.baud_rate)
     try:
         args.handler(app, args)
+        app.close_port()
     except KeyboardInterrupt:
+        app.close_port()
         print("Aborted")
         sys.exit(1)
