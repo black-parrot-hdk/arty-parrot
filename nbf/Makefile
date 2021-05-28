@@ -15,7 +15,7 @@ SED           ?= sed
 
 # only unicore configurations are currently supported
 NCPUS       := 1
-PADDR_WIDTH := 33
+PADDR_WIDTH := 40
 NBF_FLAGS ?= --ncpus=$(NCPUS) --config --addr_width=$(PADDR_WIDTH)
 
 # individual target args
