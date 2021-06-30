@@ -170,7 +170,18 @@ For more details on the usage of `host.py`, refer to its `--help` page.
 
 _To be expanded._
 
-Apply patch for clocks. Mark any signals of interest. Then:
+The ILA core requires a clock faster than our current "core" clock (min 25MHz) but slower than our
+memory clocks. To use the ILA, we must enable a new clock which is a convenient multiple of our core
+clock and within the acceptable range. A 40MHz clock works well. The patch
+`docs/0001-Add-debug-clock-and-mark-top-signals-for-debug.patch` has been provided to add this clock
+to the existing PLL and shows how to mark signals for tracing. You can apply this patch with:
+
+```
+git am < docs/0001-Add-debug-clock-and-mark-top-signals-for-debug.patch
+```
+
+Once you have marked any other signals of interest:
+
 1. Generate and open the project
 1. Run synthesis (no implementation necessary)
 1. Under "Synthesis" in the left sidebar, expand "Open Synthesized Design" and click "Set Up Debug"
