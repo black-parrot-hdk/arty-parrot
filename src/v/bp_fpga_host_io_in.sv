@@ -4,7 +4,9 @@
  *   bp_fpga_host_io_in.sv
  *
  * Description:
- *   FPGA Host IO Input module with UART Rx from PC Host and io_cmd/resp to BP
+ *   FPGA Host IO Input module with UART Rx from PC Host and io_cmd/resp to BP.
+ *   This module transmits IO commands from the PC Host to BlackParrot, for example, to load
+ *   DRAM with the program memory image and to configure the processor.
  *
  * Inputs:
  *   io_resp_i - response to io_cmd_o messages
@@ -29,8 +31,8 @@
  *         - includes nbf finish, nbf fence done, UART RX error, memory read response
  *
  *
- * TODO:
- * Send error to PC Host on SIPO enqueue error or rx_error_o raised
+ * TODO: Send error to PC Host on SIPO enqueue error or rx_error_o raised
+ * TODO: support multi-beat messages on io_cmd/io_resp
  *
  */
 
@@ -60,19 +62,23 @@ module bp_fpga_host_io_in
 
     , localparam nbf_uart_packets_lp = (nbf_width_lp / uart_data_bits_p)
 
-    `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
     )
   (input                                     clk_i
    , input                                   reset_i
 
    // To BlackParrot
-   , output logic [io_mem_msg_width_lp-1:0]  io_cmd_o
-   , output logic                            io_cmd_v_o
-   , input                                   io_cmd_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_cmd_header_o
+   , output logic [dword_width_gp-1:0]              io_cmd_data_o
+   , output logic                                   io_cmd_v_o
+   , input                                          io_cmd_yumi_i
+   , output logic                                   io_cmd_last_o
 
-   , input  [io_mem_msg_width_lp-1:0]        io_resp_i
-   , input                                   io_resp_v_i
-   , output logic                            io_resp_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_resp_header_i
+   , input [dword_width_gp-1:0]                     io_resp_data_i
+   , input                                          io_resp_v_i
+   , output logic                                   io_resp_ready_and_o
+   , input                                          io_resp_last_i
 
    // UART to PC Host
    , input                                   rx_i
@@ -87,28 +93,33 @@ module bp_fpga_host_io_in
    , output logic                            error_o
    );
 
-  `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+  `declare_bp_bedrock_mem_if(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
-  bp_bedrock_io_mem_msg_s io_cmd, io_resp;
-  assign io_cmd_o = io_cmd;
-  bp_bedrock_io_mem_payload_s io_cmd_payload;
+  bp_bedrock_io_mem_msg_header_s io_cmd, io_resp;
+  logic [dword_width_gp-1:0] io_resp_data;
+  assign io_cmd_header_o = io_cmd;
+
+  // unused - only single beat messages (<= 8-bytes data)
+  wire unused = io_resp_last_i;
+  // stub - only single beat messages (<= 8-bytes data)
+  assign io_cmd_last_o = io_cmd_v_o;
 
   logic io_resp_v_lo, io_resp_yumi_li;
   // IO response buffer
   bsg_two_fifo
-   #(.width_p($bits(bp_bedrock_io_mem_msg_s)))
+   #(.width_p($bits(bp_bedrock_io_mem_msg_header_s)+dword_width_gp))
     io_resp_fifo
      (.clk_i(clk_i)
       ,.reset_i(reset_i)
       // from input
       ,.v_i(io_resp_v_i)
       ,.ready_o(io_resp_ready_and_o)
-      ,.data_i(io_resp_i)
+      ,.data_i({io_resp_data_i,io_resp_i})
       // to FSM
       ,.v_o(io_resp_v_lo)
       ,.yumi_i(io_resp_yumi_li)
-      ,.data_o(io_resp)
+      ,.data_o({io_resp_data,io_resp})
       );
 
 
@@ -233,36 +244,35 @@ module bp_fpga_host_io_in
     nbf_v_o = '0;
     io_cmd_v_o = '0;
     io_cmd = '0;
+    io_cmd_data_o = '0;
 
     // bufer dequeue signals
     io_resp_yumi_li = 1'b0;
     nbf_buffer_yumi_li = '0;
 
     // form io_cmd from current nbf_buffer output
-    io_cmd.data = {'0, nbf_buffer_lo.data};
-    io_cmd_payload = '0;
+    io_cmd_data_o = {'0, nbf_buffer_lo.data};
     // TODO: why does bp_top testbench pass this to bp_nonsynth_nbf_loader as LCE ID?
-    io_cmd_payload.lce_id = lce_id_width_p'('b10);
-    io_cmd.header.payload = io_cmd_payload;
-    io_cmd.header.addr = nbf_buffer_lo.addr;
+    io_cmd.payload.lce_id = lce_id_width_p'('b10);
+    io_cmd.addr = nbf_buffer_lo.addr;
     unique case (nbf_buffer_lo.opcode)
       e_fpga_host_nbf_write_4: begin
-        io_cmd.header.size = e_bedrock_msg_size_4;
-        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_wr;
-        io_cmd.header.subop = e_bedrock_store;
+        io_cmd.size = e_bedrock_msg_size_4;
+        io_cmd.msg_type.mem = e_bedrock_mem_uc_wr;
+        io_cmd.subop = e_bedrock_store;
       end
       e_fpga_host_nbf_write_8: begin
-        io_cmd.header.size = e_bedrock_msg_size_8;
-        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_wr;
-        io_cmd.header.subop = e_bedrock_store;
+        io_cmd.size = e_bedrock_msg_size_8;
+        io_cmd.msg_type.mem = e_bedrock_mem_uc_wr;
+        io_cmd.subop = e_bedrock_store;
       end
       e_fpga_host_nbf_read_4: begin
-        io_cmd.header.size = e_bedrock_msg_size_4;
-        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_rd;
+        io_cmd.size = e_bedrock_msg_size_4;
+        io_cmd.msg_type.mem = e_bedrock_mem_uc_rd;
       end
       e_fpga_host_nbf_read_8: begin
-        io_cmd.header.size = e_bedrock_msg_size_8;
-        io_cmd.header.msg_type.mem = e_bedrock_mem_uc_rd;
+        io_cmd.size = e_bedrock_msg_size_8;
+        io_cmd.msg_type.mem = e_bedrock_mem_uc_rd;
       end
       default: begin end
     endcase
@@ -301,20 +311,20 @@ module bp_fpga_host_io_in
 
         // Process IO responses
         if (io_resp_v_lo) begin
-          unique case (io_resp.header.msg_type.mem)
+          unique case (io_resp.msg_type.mem)
             // uc_wr was NBF store to BP - sink response
             e_bedrock_mem_uc_wr: begin
               // can only process if nbf_o not in use
               if (~nbf_buffer_to_nbf_o) begin
                 nbf_v_o = 1'b1;
                 io_resp_yumi_li = nbf_ready_and_i;
-                unique case (io_resp.header.size)
+                unique case (io_resp.size)
                   e_bedrock_msg_size_4: nbf_lo.opcode = e_fpga_host_nbf_write_4;
                   e_bedrock_msg_size_8: nbf_lo.opcode = e_fpga_host_nbf_write_8;
                   default: nbf_lo.opcode = e_fpga_host_nbf_error;
                 endcase
-                nbf_lo.addr = io_resp.header.addr;
-                nbf_lo.data = io_resp.data[0+:nbf_data_width_p];
+                nbf_lo.addr = io_resp.addr;
+                nbf_lo.data = io_resp_data[0+:nbf_data_width_p];
               end
             end
             // uc_rd is response from NBF read from BP - send NBF packet
@@ -324,13 +334,13 @@ module bp_fpga_host_io_in
               if (~nbf_buffer_to_nbf_o) begin
                 nbf_v_o = 1'b1;
                 io_resp_yumi_li = nbf_ready_and_i;
-                unique case (io_resp.header.size)
+                unique case (io_resp.size)
                   e_bedrock_msg_size_4: nbf_lo.opcode = e_fpga_host_nbf_read_4;
                   e_bedrock_msg_size_8: nbf_lo.opcode = e_fpga_host_nbf_read_8;
                   default: nbf_lo.opcode = e_fpga_host_nbf_error;
                 endcase
-                nbf_lo.addr = io_resp.header.addr;
-                nbf_lo.data = io_resp.data[0+:nbf_data_width_p];
+                nbf_lo.addr = io_resp.addr;
+                nbf_lo.data = io_resp_data[0+:nbf_data_width_p];
               end
             end
             default: begin end

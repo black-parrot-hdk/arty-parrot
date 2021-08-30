@@ -4,7 +4,8 @@
  *   bp_fpga_host_io_out.sv
  *
  * Description:
- *   FPGA Host IO Output module with UART Tx to PC Host and io_cmd/resp from BP
+ *   FPGA Host IO Output module with UART Tx to PC Host and io_cmd/resp from BP.
+ *   This module sends IO from BlackParrot to the PC Host, for example, printf output.
  *
  * Inputs:
  *   io_cmd_i - IO requests from BlackParrotA
@@ -19,6 +20,7 @@
  *   io_resp_o - response to io_cmd_i messages
  *             - respond with ack to BP as soon as cmd is processed
  *
+ * TODO: support multi-beat messages on io_cmd/io_resp
  */
 
 `include "bp_common_defines.svh"
@@ -50,7 +52,7 @@ module bp_fpga_host_io_out
     , localparam byte_offset_width_lp = 3
     , localparam lg_num_core_lp = `BSG_SAFE_CLOG2(num_core_p)
 
-    `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
 
     , localparam putchar_base_addr_gp = paddr_width_p'(64'h0010_1000)
     , localparam finish_base_addr_gp  = paddr_width_p'(64'h0010_2???)
@@ -60,13 +62,17 @@ module bp_fpga_host_io_out
    , input                                   reset_i
 
    // From BlackParrot
-   , input [io_mem_msg_width_lp-1:0]         io_cmd_i
-   , input                                   io_cmd_v_i
-   , output logic                            io_cmd_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_cmd_header_i
+   , input [dword_width_gp-1:0]                     io_cmd_data_i
+   , input                                          io_cmd_v_i
+   , output logic                                   io_cmd_ready_and_o
+   , input                                          io_cmd_last_i
 
-   , output logic [io_mem_msg_width_lp-1:0]  io_resp_o
-   , output logic                            io_resp_v_o
-   , input                                   io_resp_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_resp_header_o
+   , output logic [dword_width_gp-1:0]              io_resp_data_o
+   , output logic                                   io_resp_v_o
+   , input                                          io_resp_yumi_i
+   , output logic                                   io_resp_last_o
 
    // UART to PC Host
    , output logic                            tx_o
@@ -77,29 +83,35 @@ module bp_fpga_host_io_out
    , output logic                            nbf_ready_and_o
    );
 
-  `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+  `declare_bp_bedrock_mem_if(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
-  bp_bedrock_io_mem_msg_s io_cmd;
+  bp_bedrock_io_mem_msg_header_s io_cmd;
+  logic [dword_width_gp-1:0] io_cmd_data;
   logic io_cmd_v, io_cmd_yumi;
 
-  bp_bedrock_io_mem_msg_s io_resp;
-  assign io_resp_o = io_resp;
+  bp_bedrock_io_mem_msg_header_s io_resp;
+  assign io_resp_header_o = io_resp;
+
+  // unused - only single beat messages (<= 8-bytes data)
+  wire unused = io_cmd_last_i;
+  // stub - only single beat messages (<= 8-bytes data)
+  assign io_resp_last_o = io_resp_v_o;
 
   // IO command buffer
   bsg_two_fifo
-   #(.width_p($bits(bp_bedrock_io_mem_msg_s)))
+   #(.width_p($bits(bp_bedrock_io_mem_msg_header_s)+dword_width_gp))
     io_cmd_fifo
      (.clk_i(clk_i)
       ,.reset_i(reset_i)
       // from input
       ,.v_i(io_cmd_v_i)
       ,.ready_o(io_cmd_ready_and_o)
-      ,.data_i(io_cmd_i)
+      ,.data_i({io_cmd_data_i, io_cmd_header_i})
       // to FSM
       ,.v_o(io_cmd_v)
       ,.yumi_i(io_cmd_yumi)
-      ,.data_o(io_cmd)
+      ,.data_o({io_cmd_data, io_cmd})
       );
 
   bp_fpga_host_nbf_s nbf_li;
@@ -230,6 +242,7 @@ module bp_fpga_host_io_out
   always_comb begin
     // outputs
     io_resp = '0;
+    io_resp_data_o = '0;
     io_resp_v_o = 1'b0;
     io_nbf_yumi = 1'b0;
     io_nbf_v = 1'b0;
@@ -246,25 +259,26 @@ module bp_fpga_host_io_out
       end
       e_ready: begin
         io_nbf_n = '0;
-        unique casez (io_cmd.header.addr)
+        unique casez (io_cmd.addr)
           putchar_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_putch;
             io_nbf_n.addr = '1;
-            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
+            io_nbf_n.data[0+:8] = io_cmd_data[0+:8];
           end
           putchar_core_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_putch;
-            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp]};
-            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
+            io_nbf_n.addr = {'0, io_cmd.addr[byte_offset_width_lp+:lg_num_core_lp]};
+            io_nbf_n.data[0+:8] = io_cmd_data[0+:8];
           end
           finish_base_addr_gp: begin
             io_nbf_n.opcode = e_fpga_host_nbf_core_done;
-            io_nbf_n.addr = {'0, io_cmd.header.addr[byte_offset_width_lp+:lg_num_core_lp]};
-            io_nbf_n.data[0+:8] = io_cmd.data[0+:8];
+            io_nbf_n.addr = {'0, io_cmd.addr[byte_offset_width_lp+:lg_num_core_lp]};
+            io_nbf_n.data[0+:8] = io_cmd_data[0+:8];
           end
           default: begin end
         endcase
         io_resp = io_cmd;
+        io_resp_data_o = io_cmd_data;
         io_resp_v_o = io_cmd_v;
         io_cmd_yumi = io_cmd_v & io_resp_yumi_i;
         state_n = io_cmd_yumi ? e_send_nbf : e_ready;

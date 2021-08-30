@@ -24,7 +24,7 @@ module arty_parrot
 
       , localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(caddr_width_p)
 
-      `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+      `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
       )
     (input master_clk_100mhz_i
      , input master_reset_active_low_i
@@ -38,7 +38,7 @@ module arty_parrot
      , output logic reset_led_o
     );
 
-    `declare_bp_bedrock_mem_if(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    `declare_bp_bedrock_mem_if(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
 
     logic fpga_host_error_lo;
 
@@ -95,14 +95,18 @@ module arty_parrot
 
     // I/O command buses
     // to FPGA Host
-    bp_bedrock_io_mem_msg_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
+    bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
+    logic [dword_width_gp-1:0] fpga_host_io_cmd_data_li, fpga_host_io_resp_data_lo;
     logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
     logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
+    logic fpga_host_io_cmd_last_li, fpga_host_io_resp_last_lo;
 
     // from FPGA Host
-    bp_bedrock_io_mem_msg_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
+    bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
+    logic [dword_width_gp-1:0] fpga_host_io_cmd_data_lo, fpga_host_io_resp_data_li;
     logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
     logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
+    logic fpga_host_io_cmd_last_lo, fpga_host_io_resp_last_li;
 
 
     // bsg cache DRAM buses
@@ -185,22 +189,30 @@ module arty_parrot
          ,.reset_i(reset_core_clk_lo)
 
          // to FPGA Host
-         ,.io_cmd_i           (fpga_host_io_cmd_li)
-         ,.io_cmd_v_i         (fpga_host_io_cmd_v_li)
-         ,.io_cmd_ready_and_o (fpga_host_io_cmd_ready_and_lo)
+         ,.io_cmd_header_i     (fpga_host_io_cmd_li)
+         ,.io_cmd_data_i       (fpga_host_io_cmd_data_li)
+         ,.io_cmd_v_i          (fpga_host_io_cmd_v_li)
+         ,.io_cmd_ready_and_o  (fpga_host_io_cmd_ready_and_lo)
+         ,.io_cmd_last_i       (fpga_host_io_cmd_last_li)
 
-         ,.io_resp_o          (fpga_host_io_resp_lo)
-         ,.io_resp_v_o        (fpga_host_io_resp_v_lo)
-         ,.io_resp_yumi_i     (fpga_host_io_resp_yumi_li)
+         ,.io_resp_header_o    (fpga_host_io_resp_lo)
+         ,.io_resp_data_o      (fpga_host_io_resp_data_lo)
+         ,.io_resp_v_o         (fpga_host_io_resp_v_lo)
+         ,.io_resp_yumi_i      (fpga_host_io_resp_yumi_li)
+         ,.io_resp_last_o      (fpga_host_io_resp_last_lo)
 
          // from FPGA Host
-         ,.io_cmd_o            (fpga_host_io_cmd_lo)
+         ,.io_cmd_header_o     (fpga_host_io_cmd_lo)
+         ,.io_cmd_data_o       (fpga_host_io_cmd_data_lo)
          ,.io_cmd_v_o          (fpga_host_io_cmd_v_lo)
          ,.io_cmd_yumi_i       (fpga_host_io_cmd_yumi_li)
+         ,.io_cmd_last_o       (fpga_host_io_cmd_last_lo)
 
-         ,.io_resp_i           (fpga_host_io_resp_li)
+         ,.io_resp_header_i    (fpga_host_io_resp_li)
+         ,.io_resp_data_i      (fpga_host_io_resp_data_li)
          ,.io_resp_v_i         (fpga_host_io_resp_v_li)
          ,.io_resp_ready_and_o (fpga_host_io_resp_ready_and_lo)
+         ,.io_resp_last_i      (fpga_host_io_resp_last_li)
 
          // UART
          ,.rx_i(uart_rx_i)
@@ -219,35 +231,43 @@ module arty_parrot
        ,.reset_i(reset_core_clk_lo)
 
        // I/O to FPGA Host
-       ,.io_cmd_o        (fpga_host_io_cmd_li)
-       ,.io_cmd_v_o      (fpga_host_io_cmd_v_li)
-       ,.io_cmd_ready_and_i  (fpga_host_io_cmd_ready_and_lo)
+       ,.io_cmd_header_o      (fpga_host_io_cmd_li)
+       ,.io_cmd_data_o        (fpga_host_io_cmd_data_li)
+       ,.io_cmd_v_o           (fpga_host_io_cmd_v_li)
+       ,.io_cmd_ready_and_i   (fpga_host_io_cmd_ready_and_lo)
+       ,.io_cmd_last_o        (fpga_host_io_cmd_last_li)
 
-       ,.io_resp_i       (fpga_host_io_resp_lo)
-       ,.io_resp_v_i     (fpga_host_io_resp_v_lo)
-       ,.io_resp_yumi_o  (fpga_host_io_resp_yumi_li)
+       ,.io_resp_header_i     (fpga_host_io_resp_lo)
+       ,.io_resp_data_i       (fpga_host_io_resp_data_lo)
+       ,.io_resp_v_i          (fpga_host_io_resp_v_lo)
+       ,.io_resp_yumi_o       (fpga_host_io_resp_yumi_li)
+       ,.io_resp_last_i       (fpga_host_io_resp_last_lo)
 
        // I/O from FPGA host
-       ,.io_cmd_i        (fpga_host_io_cmd_lo)
-       ,.io_cmd_v_i      (fpga_host_io_cmd_v_lo)
-       ,.io_cmd_yumi_o   (fpga_host_io_cmd_yumi_li)
+       ,.io_cmd_header_i      (fpga_host_io_cmd_lo)
+       ,.io_cmd_data_i        (fpga_host_io_cmd_data_lo)
+       ,.io_cmd_v_i           (fpga_host_io_cmd_v_lo)
+       ,.io_cmd_yumi_o        (fpga_host_io_cmd_yumi_li)
+       ,.io_cmd_last_i        (fpga_host_io_cmd_last_lo)
 
-       ,.io_resp_o       (fpga_host_io_resp_li)
-       ,.io_resp_v_o     (fpga_host_io_resp_v_li)
-       ,.io_resp_ready_and_i (fpga_host_io_resp_ready_and_lo)
+       ,.io_resp_header_o     (fpga_host_io_resp_li)
+       ,.io_resp_data_o       (fpga_host_io_resp_data_li)
+       ,.io_resp_v_o          (fpga_host_io_resp_v_li)
+       ,.io_resp_ready_and_i  (fpga_host_io_resp_ready_and_lo)
+       ,.io_resp_last_o       (fpga_host_io_resp_last_li)
 
        // DRAM interface
-       ,.dma_pkt_o      (dram_controller_dma_pkt_li)
-       ,.dma_pkt_v_o    (dram_controller_dma_pkt_v_li)
-       ,.dma_pkt_yumi_i (dram_controller_dma_pkt_yumi_lo)
+       ,.dma_pkt_o            (dram_controller_dma_pkt_li)
+       ,.dma_pkt_v_o          (dram_controller_dma_pkt_v_li)
+       ,.dma_pkt_yumi_i       (dram_controller_dma_pkt_yumi_lo)
 
        ,.dma_data_i           (dram_controller_dma_data_lo)
        ,.dma_data_v_i         (dram_controller_dma_data_v_lo)
        ,.dma_data_ready_and_o (dram_controller_dma_data_ready_and_li)
 
-       ,.dma_data_o      (dram_controller_dma_data_li)
-       ,.dma_data_v_o    (dram_controller_dma_data_v_li)
-       ,.dma_data_yumi_i (dram_controller_dma_data_yumi_lo)
+       ,.dma_data_o           (dram_controller_dma_data_li)
+       ,.dma_data_v_o         (dram_controller_dma_data_v_li)
+       ,.dma_data_yumi_i      (dram_controller_dma_data_yumi_lo)
       );
 
 endmodule

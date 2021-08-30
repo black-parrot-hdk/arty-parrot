@@ -35,35 +35,43 @@ module bp_fpga_host
     , parameter io_in_nbf_buffer_els_p = 4
     , parameter io_out_nbf_buffer_els_p = 4
 
-    `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
     )
-  (input                                     clk_i
-   , input                                   reset_i
+  (input                                            clk_i
+   , input                                          reset_i
 
    // From BlackParrot
-   , input [io_mem_msg_width_lp-1:0]         io_cmd_i
-   , input                                   io_cmd_v_i
-   , output logic                            io_cmd_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_cmd_header_i
+   , input [dword_width_gp-1:0]                     io_cmd_data_i
+   , input                                          io_cmd_v_i
+   , output logic                                   io_cmd_ready_and_o
+   , input                                          io_cmd_last_i
 
-   , output logic [io_mem_msg_width_lp-1:0]  io_resp_o
-   , output logic                            io_resp_v_o
-   , input                                   io_resp_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_resp_header_o
+   , output logic [dword_width_gp-1:0]              io_resp_data_o
+   , output logic                                   io_resp_v_o
+   , input                                          io_resp_yumi_i
+   , output logic                                   io_resp_last_o
 
    // To BlackParrot
-   , output logic [io_mem_msg_width_lp-1:0]  io_cmd_o
-   , output logic                            io_cmd_v_o
-   , input                                   io_cmd_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_cmd_header_o
+   , output logic [dword_width_gp-1:0]              io_cmd_data_o
+   , output logic                                   io_cmd_v_o
+   , input                                          io_cmd_yumi_i
+   , output logic                                   io_cmd_last_o
 
-   , input  [io_mem_msg_width_lp-1:0]        io_resp_i
-   , input                                   io_resp_v_i
-   , output logic                            io_resp_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_resp_header_i
+   , input [dword_width_gp-1:0]                     io_resp_data_i
+   , input                                          io_resp_v_i
+   , output logic                                   io_resp_ready_and_o
+   , input                                          io_resp_last_i
 
    // UART from/to PC Host
-   , input                                   rx_i
-   , output logic                            tx_o
+   , input                                          rx_i
+   , output logic                                   tx_o
 
    // Error bit - typically map to FPGA LED
-   , output logic                            error_o
+   , output logic                                   error_o
 
    );
 
@@ -105,12 +113,16 @@ module bp_fpga_host
     host_io_in
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.io_cmd_o(io_cmd_o)
+     ,.io_cmd_header_o(io_cmd_header_o)
+     ,.io_cmd_data_o(io_cmd_data_o)
      ,.io_cmd_v_o(io_cmd_v_o)
      ,.io_cmd_yumi_i(io_cmd_yumi_i)
-     ,.io_resp_i(io_resp_i)
+     ,.io_cmd_last_o(io_cmd_last_o)
+     ,.io_resp_header_i(io_resp_header_i)
+     ,.io_resp_data_i(io_resp_data_i)
      ,.io_resp_v_i(io_resp_v_i)
      ,.io_resp_ready_and_o(io_resp_ready_and_o)
+     ,.io_resp_last_i(io_resp_last_i)
      ,.rx_i(rx_i)
      ,.nbf_o(nbf_lo)
      ,.nbf_v_o(nbf_v_lo)
@@ -132,12 +144,16 @@ module bp_fpga_host
     host_io_out
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.io_cmd_i(io_cmd_i)
+     ,.io_cmd_header_i(io_cmd_header_i)
+     ,.io_cmd_data_i(io_cmd_data_i)
      ,.io_cmd_v_i(io_cmd_v_i)
      ,.io_cmd_ready_and_o(io_cmd_ready_and_o)
-     ,.io_resp_o(io_resp_o)
+     ,.io_cmd_last_i(io_cmd_last_i)
+     ,.io_resp_header_o(io_resp_header_o)
+     ,.io_resp_data_o(io_resp_data_o)
      ,.io_resp_v_o(io_resp_v_o)
      ,.io_resp_yumi_i(io_resp_yumi_i)
+     ,.io_resp_last_o(io_resp_last_o)
      ,.tx_o(tx_o)
      ,.nbf_i(nbf_lo)
      ,.nbf_v_i(nbf_v_lo)
