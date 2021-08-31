@@ -75,24 +75,22 @@ module bp_fpga_host
 
    );
 
-  initial begin
-    assert(nbf_addr_width_p % 8 == 0)
-      else $error("NBF address width must be a multiple of 8-bits");
-    assert(nbf_addr_width_p == 40)
-      else $error("NBF address width must be 40-bits");
-    assert(nbf_data_width_p == 64)
-      else $error("NBF data width must be 64-bits");
-    assert(uart_data_bits_p == 8)
-      else $error("UART must use 8 data bits");
-    assert(uart_parity_bit_p == 0 || uart_parity_bit_p == 1)
-      else $error("UART parity_bit_p must be 0 (none) or 1");
-    assert(uart_parity_odd_p == 0 || uart_parity_odd_p == 1)
-      else $error("UART parity_odd_p must be 0 (even) or 1 (odd)");
-    assert(uart_stop_bits_p == 1 || uart_stop_bits_p == 2)
-      else $error("Invalid UART stop bits setting. Must be 1 or 2.");
-    assert(nbf_width_lp % uart_data_bits_p == 0)
-      else $error("uart data bits must be even divisor of NBF packet width");
-  end
+  if(!(nbf_addr_width_p % 8 == 0))
+    $fatal(0,"NBF address width must be a multiple of 8-bits");
+  if(!(nbf_addr_width_p == 40))
+    $fatal(0,"NBF address width must be 40-bits");
+  if(!(nbf_data_width_p == 64))
+    $fatal(0,"NBF data width must be 64-bits");
+  if(!(uart_data_bits_p == 8))
+    $fatal(0,"UART must use 8 data bits");
+  if(!(uart_parity_bit_p == 0 || uart_parity_bit_p == 1))
+    $fatal(0,"UART parity_bit_p must be 0 (none) or 1");
+  if(!(uart_parity_odd_p == 0 || uart_parity_odd_p == 1))
+    $fatal(0,"UART parity_odd_p must be 0 (even) or 1 (odd)");
+  if(!(uart_stop_bits_p == 1 || uart_stop_bits_p == 2))
+    $fatal(0,"Invalid UART stop bits setting. Must be 1 or 2.");
+  if(!(nbf_width_lp % uart_data_bits_p == 0))
+    $fatal(0,"uart data bits must be even divisor of NBF packet width");
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 

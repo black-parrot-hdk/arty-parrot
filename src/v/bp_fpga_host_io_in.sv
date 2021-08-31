@@ -115,7 +115,7 @@ module bp_fpga_host_io_in
       // from input
       ,.v_i(io_resp_v_i)
       ,.ready_o(io_resp_ready_and_o)
-      ,.data_i({io_resp_data_i,io_resp_i})
+      ,.data_i({io_resp_data_i,io_resp_header_i})
       // to FSM
       ,.v_o(io_resp_v_lo)
       ,.yumi_i(io_resp_yumi_li)
