@@ -1,13 +1,8 @@
-set blackparrot_dir "."
+set blackparrot_dir "./rtl"
 set arty_dir "."
 
 # Set the project name
 set _xil_proj_name_ "arty-parrot"
-
-# Use project name variable, if specified in the tcl shell
-if { [info exists ::user_project_name] } {
-  set _xil_proj_name_ $::user_project_name
-}
 
 variable script_file
 set script_file "generate_project.tcl"
@@ -70,7 +65,7 @@ set_property -name "enable_vhdl_2008" -value "1" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
 set_property -name "ip_output_repo" -value "$proj_dir/${_xil_proj_name_}.cache/ip" -objects $obj
 set_property -name "mem.enable_memory_map_generation" -value "1" -objects $obj
-# set_property -name "platform.board_id" -value "arty-a7-100" -objects $obj
+set_property -name "platform.board_id" -value "arty-a7-100" -objects $obj
 set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_user_files" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
@@ -79,10 +74,18 @@ set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "source_mgmt_mode" -value "None" -objects $obj
 set_property -name "webtalk.xsim_launch_sim" -value "48" -objects $obj
 
+
+# TODO: steps for project creation:
+# 0. basic project settings
+# 1. read BP flist
+# 2. additional files
+# 3. generate block design
+# 4. generate wrapper for block design and add to sources
+
 # Discover source files
 
 # reads the top-level flist and returns a 2-element list: [list $include_dirs $source_files]
-proc load_sources_from_flist { blackparrot_dir } {
+proc load_bp_sources_from_flist { blackparrot_dir } {
   # Set include vars used in flists
   set BP_TOP_DIR "$blackparrot_dir/bp_top/"
   set BP_COMMON_DIR "$blackparrot_dir/bp_common/"
@@ -124,7 +127,7 @@ proc load_sources_from_flist { blackparrot_dir } {
   list $include_dirs $source_files
 }
 
-lassign [load_sources_from_flist $blackparrot_dir] flist_include_dirs flist_source_files
+lassign [load_bp_sources_from_flist $blackparrot_dir] flist_include_dirs flist_source_files
 # TODO: replace below with external flist file
 set additional_include_dirs [list \
   [file normalize "${arty_dir}/src/include/" ] \
@@ -137,8 +140,6 @@ set additional_source_files [list \
   [file normalize "${arty_dir}/src/v/bp_fpga_host_io_in.sv" ] \
   [file normalize "${arty_dir}/src/v/bp_fpga_host_io_out.sv" ] \
   [file normalize "${arty_dir}/src/v/arty_parrot.sv" ] \
-  [file normalize "${arty_dir}/src/v/mig_ddr3_ram.sv" ] \
-  [file normalize "${arty_dir}/src/test/mig_ddr3_ram_demo_system.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \

@@ -1,4 +1,3 @@
-`include "bp_mig_ddr3_ram_interface.svh"
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
@@ -26,248 +25,287 @@ module arty_parrot
 
       `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
       )
-    (input master_clk_100mhz_i
-     , input master_reset_active_low_i
+    (input external_clock_i // 100 MHz clock from board
+     , input external_reset_n_i // active low reset from red reset button on board
 
-     ,`declare_mig_ddr3_native_control_ports
+     , output [13:0]ddr3_sdram_addr
+     , output [2:0]ddr3_sdram_ba
+     , output ddr3_sdram_cas_n
+     , output [0:0]ddr3_sdram_ck_n
+     , output [0:0]ddr3_sdram_ck_p
+     , output [0:0]ddr3_sdram_cke
+     , output [0:0]ddr3_sdram_cs_n
+     , output [1:0]ddr3_sdram_dm
+     , inout [15:0]ddr3_sdram_dq
+     , inout [1:0]ddr3_sdram_dqs_n
+     , inout [1:0]ddr3_sdram_dqs_p
+     , output [0:0]ddr3_sdram_odt
+     , output ddr3_sdram_ras_n
+     , output ddr3_sdram_reset_n
+     , output ddr3_sdram_we_n
 
      , input logic uart_rx_i
      , output logic uart_tx_o
 
      , output logic error_led_o
      , output logic reset_led_o
+     , output logic rd_error_led_o
+     , output logic wr_error_led_o
+     , output logic done_led_o
     );
 
-    `declare_bp_bedrock_mem_if(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
+  // DDR to external
+  wire [13:0]ddr3_sdram_addr;
+  wire [2:0]ddr3_sdram_ba;
+  wire ddr3_sdram_cas_n;
+  wire [0:0]ddr3_sdram_ck_n;
+  wire [0:0]ddr3_sdram_ck_p;
+  wire [0:0]ddr3_sdram_cke;
+  wire [0:0]ddr3_sdram_cs_n;
+  wire [1:0]ddr3_sdram_dm;
+  wire [15:0]ddr3_sdram_dq;
+  wire [1:0]ddr3_sdram_dqs_n;
+  wire [1:0]ddr3_sdram_dqs_p;
+  wire [0:0]ddr3_sdram_odt;
+  wire ddr3_sdram_ras_n;
+  wire ddr3_sdram_reset_n;
+  wire ddr3_sdram_we_n;
 
-    logic fpga_host_error_lo;
+  `declare_bp_bedrock_mem_if(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
 
-    wire master_reset_async_i = !master_reset_active_low_i;
-    assign reset_led_o = master_reset_async_i;
-    assign error_led_o = fpga_host_error_lo;
+  logic fpga_host_error_lo;
+  assign reset_led_o = external_reset_n_i ? 1'b0 : 1'b1;
+  assign error_led_o = fpga_host_error_lo;
 
-    // Synchronizer for master clock reset
-    logic reset_master_clk_lo;
-    bsg_dff_chain
-        #(.width_p(1)
-          ,.num_stages_p(2)
-        )
-        reset_sync_master_clk
-        (.clk_i(master_clk_100mhz_i)
-         ,.data_i(master_reset_async_i)
-         ,.data_o(reset_master_clk_lo)
-        );
+  // I/O command buses
+  // to FPGA Host
+  bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
+  logic [dword_width_gp-1:0] fpga_host_io_cmd_data_li, fpga_host_io_resp_data_lo;
+  logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
+  logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
+  logic fpga_host_io_cmd_last_li, fpga_host_io_resp_last_lo;
 
-    // Clock generation
-    logic reset_sys_clk_lo;
-    logic sys_clk_lo, ref_clk_lo, core_clk_lo;
-    assign sys_clk_lo = master_clk_100mhz_i;
-    assign reset_sys_clk_lo = reset_master_clk_lo;
+  // from FPGA Host
+  bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
+  logic [dword_width_gp-1:0] fpga_host_io_cmd_data_lo, fpga_host_io_resp_data_li;
+  logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
+  logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
+  logic fpga_host_io_cmd_last_lo, fpga_host_io_resp_last_li;
 
-    // Reset generation
-    // We reset the clock gen MMCM on the rising edge of the incoming reset only; this allows the
-    // clock to start running again and downstream clocked modules to "see" the reset subsequently.
-    logic last_reset_sys_clk_r, clock_reset_sys_clk_r;
-    always_ff @(posedge sys_clk_lo) begin
-      last_reset_sys_clk_r <= reset_sys_clk_lo;
-      clock_reset_sys_clk_r <= reset_sys_clk_lo && !last_reset_sys_clk_r;
-    end
+  // bsg cache DRAM buses
+  // TODO: L2 fill width should be set to 64-bits (or whatever AXI lite data width is)
+  logic [dma_pkt_width_lp-1:0] dram_controller_dma_pkt_li;
+  logic                        dram_controller_dma_pkt_v_li;
+  logic                        dram_controller_dma_pkt_yumi_lo;
 
-    dram_clk_gen clk_gen
-      (.master_clk_100mhz_i(master_clk_100mhz_i)
-       ,.reset(clock_reset_sys_clk_r)
-       ,.ref_clk_o(ref_clk_lo)
-       ,.core_clk_o(core_clk_lo)
+  logic[l2_fill_width_p-1:0]   dram_controller_dma_data_lo;
+  logic                        dram_controller_dma_data_v_lo;
+  logic                        dram_controller_dma_data_ready_and_li;
+
+  logic [l2_fill_width_p-1:0]  dram_controller_dma_data_li;
+  logic                        dram_controller_dma_data_v_li;
+  logic                        dram_controller_dma_data_yumi_lo;
+
+  logic proc_reset_o;
+  logic mig_ddr_init_calib_complete_o;
+
+  // AXI 4 Lite signals
+  // All core logic runs on the axi_clk at ~20 MHz
+  logic axi_clk, axi_rst_n;
+  wire axi_rst = ~axi_rst_n;
+  wire [27:0]s_axi_lite_i_araddr;
+  wire [2:0]s_axi_lite_i_arprot;
+  wire s_axi_lite_i_arready;
+  wire s_axi_lite_i_arvalid;
+  wire [27:0]s_axi_lite_i_awaddr;
+  wire [2:0]s_axi_lite_i_awprot;
+  wire s_axi_lite_i_awready;
+  wire s_axi_lite_i_awvalid;
+  wire s_axi_lite_i_bready;
+  wire [1:0]s_axi_lite_i_bresp;
+  wire s_axi_lite_i_bvalid;
+  wire [63:0]s_axi_lite_i_rdata;
+  wire s_axi_lite_i_rready;
+  wire [1:0]s_axi_lite_i_rresp;
+  wire s_axi_lite_i_rvalid;
+  wire [63:0]s_axi_lite_i_wdata;
+  wire s_axi_lite_i_wready;
+  wire [7:0]s_axi_lite_i_wstrb;
+  wire s_axi_lite_i_wvalid;
+
+  design_1_wrapper design_ip
+   (.ddr3_sdram_addr(ddr3_sdram_addr),
+    .ddr3_sdram_ba(ddr3_sdram_ba),
+    .ddr3_sdram_cas_n(ddr3_sdram_cas_n),
+    .ddr3_sdram_ck_n(ddr3_sdram_ck_n),
+    .ddr3_sdram_ck_p(ddr3_sdram_ck_p),
+    .ddr3_sdram_cke(ddr3_sdram_cke),
+    .ddr3_sdram_cs_n(ddr3_sdram_cs_n),
+    .ddr3_sdram_dm(ddr3_sdram_dm),
+    .ddr3_sdram_dq(ddr3_sdram_dq),
+    .ddr3_sdram_dqs_n(ddr3_sdram_dqs_n),
+    .ddr3_sdram_dqs_p(ddr3_sdram_dqs_p),
+    .ddr3_sdram_odt(ddr3_sdram_odt),
+    .ddr3_sdram_ras_n(ddr3_sdram_ras_n),
+    .ddr3_sdram_reset_n(ddr3_sdram_reset_n),
+    .ddr3_sdram_we_n(ddr3_sdram_we_n),
+    .mig_ddr_init_calib_complete_o(mig_ddr_init_calib_complete_o),
+    .proc_reset_o(proc_reset_o),
+    .s_axi_clk_20M_o(axi_clk),
+    .s_axi_reset_n_o(axi_rst_n),
+    .s_axi_lite_i_araddr(s_axi_lite_i_araddr),
+    .s_axi_lite_i_arprot(s_axi_lite_i_arprot),
+    .s_axi_lite_i_arready(s_axi_lite_i_arready),
+    .s_axi_lite_i_arvalid(s_axi_lite_i_arvalid),
+    .s_axi_lite_i_awaddr(s_axi_lite_i_awaddr),
+    .s_axi_lite_i_awprot(s_axi_lite_i_awprot),
+    .s_axi_lite_i_awready(s_axi_lite_i_awready),
+    .s_axi_lite_i_awvalid(s_axi_lite_i_awvalid),
+    .s_axi_lite_i_bready(s_axi_lite_i_bready),
+    .s_axi_lite_i_bresp(s_axi_lite_i_bresp),
+    .s_axi_lite_i_bvalid(s_axi_lite_i_bvalid),
+    .s_axi_lite_i_rdata(s_axi_lite_i_rdata),
+    .s_axi_lite_i_rready(s_axi_lite_i_rready),
+    .s_axi_lite_i_rresp(s_axi_lite_i_rresp),
+    .s_axi_lite_i_rvalid(s_axi_lite_i_rvalid),
+    .s_axi_lite_i_wdata(s_axi_lite_i_wdata),
+    .s_axi_lite_i_wready(s_axi_lite_i_wready),
+    .s_axi_lite_i_wstrb(s_axi_lite_i_wstrb),
+    .s_axi_lite_i_wvalid(s_axi_lite_i_wvalid),
+    .external_clock_i(external_clock_i),
+    .external_reset_n_i(external_reset_n_i)
+    );
+
+  // FPGA Host
+  bp_fpga_host
+    #(.bp_params_p              (bp_params_p)
+      ,.nbf_addr_width_p        (nbf_addr_width_p)
+      ,.nbf_data_width_p        (nbf_data_width_p)
+      ,.uart_clk_per_bit_p      (uart_clk_per_bit_p)
+      ,.uart_data_bits_p        (uart_data_bits_p)
+      ,.uart_parity_bit_p       (uart_parity_bit_p)
+      ,.uart_parity_odd_p       (uart_parity_odd_p)
+      ,.uart_stop_bits_p        (uart_stop_bits_p)
+      ,.io_in_nbf_buffer_els_p  (io_in_nbf_buffer_els_p)
+      ,.io_out_nbf_buffer_els_p (io_out_nbf_buffer_els_p)
+      )
+      fpga_host
+      (.clk_i(axi_clk)
+       ,.reset_i(axi_rst)
+
+       // to FPGA Host
+       ,.io_cmd_header_i     (fpga_host_io_cmd_li)
+       ,.io_cmd_data_i       (fpga_host_io_cmd_data_li)
+       ,.io_cmd_v_i          (fpga_host_io_cmd_v_li)
+       ,.io_cmd_ready_and_o  (fpga_host_io_cmd_ready_and_lo)
+       ,.io_cmd_last_i       (fpga_host_io_cmd_last_li)
+
+       ,.io_resp_header_o    (fpga_host_io_resp_lo)
+       ,.io_resp_data_o      (fpga_host_io_resp_data_lo)
+       ,.io_resp_v_o         (fpga_host_io_resp_v_lo)
+       ,.io_resp_yumi_i      (fpga_host_io_resp_yumi_li)
+       ,.io_resp_last_o      (fpga_host_io_resp_last_lo)
+
+       // from FPGA Host
+       ,.io_cmd_header_o     (fpga_host_io_cmd_lo)
+       ,.io_cmd_data_o       (fpga_host_io_cmd_data_lo)
+       ,.io_cmd_v_o          (fpga_host_io_cmd_v_lo)
+       ,.io_cmd_yumi_i       (fpga_host_io_cmd_yumi_li)
+       ,.io_cmd_last_o       (fpga_host_io_cmd_last_lo)
+
+       ,.io_resp_header_i    (fpga_host_io_resp_li)
+       ,.io_resp_data_i      (fpga_host_io_resp_data_li)
+       ,.io_resp_v_i         (fpga_host_io_resp_v_li)
+       ,.io_resp_ready_and_o (fpga_host_io_resp_ready_and_lo)
+       ,.io_resp_last_i      (fpga_host_io_resp_last_li)
+
+       // UART
+       ,.rx_i(uart_rx_i)
+       ,.tx_o(uart_tx_o)
+
+       // UART error
+       ,.error_o(fpga_host_error_lo)
       );
 
+  // Black Parrot core
+  bp_unicore
+    #(.bp_params_p(bp_params_p))
+    core
+    (.clk_i(axi_clk)
+     ,.reset_i(axi_rst)
 
-    // Synchronizer for core clock reset
-    logic reset_core_clk_lo;
-    bsg_dff_chain
-        #(.width_p(1)
-          ,.num_stages_p(2)
-        )
-        reset_sync_core_clk
-        (.clk_i(core_clk_lo)
-         ,.data_i(master_reset_async_i)
-         ,.data_o(reset_core_clk_lo)
-        );
+     // I/O to FPGA Host
+     ,.io_cmd_header_o      (fpga_host_io_cmd_li)
+     ,.io_cmd_data_o        (fpga_host_io_cmd_data_li)
+     ,.io_cmd_v_o           (fpga_host_io_cmd_v_li)
+     ,.io_cmd_ready_and_i   (fpga_host_io_cmd_ready_and_lo)
+     ,.io_cmd_last_o        (fpga_host_io_cmd_last_li)
 
-    // I/O command buses
-    // to FPGA Host
-    bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
-    logic [dword_width_gp-1:0] fpga_host_io_cmd_data_li, fpga_host_io_resp_data_lo;
-    logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
-    logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
-    logic fpga_host_io_cmd_last_li, fpga_host_io_resp_last_lo;
+     ,.io_resp_header_i     (fpga_host_io_resp_lo)
+     ,.io_resp_data_i       (fpga_host_io_resp_data_lo)
+     ,.io_resp_v_i          (fpga_host_io_resp_v_lo)
+     ,.io_resp_yumi_o       (fpga_host_io_resp_yumi_li)
+     ,.io_resp_last_i       (fpga_host_io_resp_last_lo)
 
-    // from FPGA Host
-    bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
-    logic [dword_width_gp-1:0] fpga_host_io_cmd_data_lo, fpga_host_io_resp_data_li;
-    logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
-    logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
-    logic fpga_host_io_cmd_last_lo, fpga_host_io_resp_last_li;
+     // I/O from FPGA host
+     ,.io_cmd_header_i      (fpga_host_io_cmd_lo)
+     ,.io_cmd_data_i        (fpga_host_io_cmd_data_lo)
+     ,.io_cmd_v_i           (fpga_host_io_cmd_v_lo)
+     ,.io_cmd_yumi_o        (fpga_host_io_cmd_yumi_li)
+     ,.io_cmd_last_i        (fpga_host_io_cmd_last_lo)
 
+     ,.io_resp_header_o     (fpga_host_io_resp_li)
+     ,.io_resp_data_o       (fpga_host_io_resp_data_li)
+     ,.io_resp_v_o          (fpga_host_io_resp_v_li)
+     ,.io_resp_ready_and_i  (fpga_host_io_resp_ready_and_lo)
+     ,.io_resp_last_o       (fpga_host_io_resp_last_li)
 
-    // bsg cache DRAM buses
-    logic [dma_pkt_width_lp-1:0] dram_controller_dma_pkt_li;
-    logic                        dram_controller_dma_pkt_v_li;
-    logic                        dram_controller_dma_pkt_yumi_lo;
+     // DRAM interface
+     ,.dma_pkt_o            (dram_controller_dma_pkt_li)
+     ,.dma_pkt_v_o          (dram_controller_dma_pkt_v_li)
+     ,.dma_pkt_yumi_i       (dram_controller_dma_pkt_yumi_lo)
 
-    logic[l2_fill_width_p-1:0]   dram_controller_dma_data_lo;
-    logic                        dram_controller_dma_data_v_lo;
-    logic                        dram_controller_dma_data_ready_and_li;
+     ,.dma_data_i           (dram_controller_dma_data_lo)
+     ,.dma_data_v_i         (dram_controller_dma_data_v_lo)
+     ,.dma_data_ready_and_o (dram_controller_dma_data_ready_and_li)
 
-    logic [l2_fill_width_p-1:0]  dram_controller_dma_data_li;
-    logic                        dram_controller_dma_data_v_li;
-    logic                        dram_controller_dma_data_yumi_lo;
+     ,.dma_data_o           (dram_controller_dma_data_li)
+     ,.dma_data_v_o         (dram_controller_dma_data_v_li)
+     ,.dma_data_yumi_i      (dram_controller_dma_data_yumi_lo)
+    );
 
-    // DRAM controller
-    logic init_calib_complete_lo;
-    mig_ddr3_ram
-        #(.bp_params_p(bp_params_p))
-        dram_controller
-        (.sys_clk_i(sys_clk_lo)
-         ,.reset_sys_clk_i(reset_sys_clk_lo)
-         ,.ref_clk_i(ref_clk_lo)
-         ,.core_clk_i(core_clk_lo)
-         ,.reset_core_clk_i(reset_core_clk_lo)
+  // TODO: bsg cache dma to AXI 4 Lite converter
+  axi4_lite_traffic_gen mem_traffic_gen
+    (.clk_i(axi_clk),
+     .reset_n_i(axi_rst_n),
+     // read address
+     .araddr_o(s_axi_lite_i_araddr),
+     .arprot_o(s_axi_lite_i_arprot),
+     .arready_i(s_axi_lite_i_arready),
+     .arvalid_o(s_axi_lite_i_arvalid),
+     // write address
+     .awaddr_o(s_axi_lite_i_awaddr),
+     .awprot_o(s_axi_lite_i_awprot),
+     .awready_i(s_axi_lite_i_awready),
+     .awvalid_o(s_axi_lite_i_awvalid),
+     // write response
+     .bready_o(s_axi_lite_i_bready),
+     .bresp_i(s_axi_lite_i_bresp),
+     .bvalid_i(s_axi_lite_i_bvalid),
+     // read data
+     .rdata_i(s_axi_lite_i_rdata),
+     .rready_o(s_axi_lite_i_rready),
+     .rresp_o(s_axi_lite_i_rresp),
+     .rvalid_i(s_axi_lite_i_rvalid),
+     // write data
+     .wdata_o(s_axi_lite_i_wdata),
+     .wready_i(s_axi_lite_i_wready),
+     .wstrb_o(s_axi_lite_i_wstrb),
+     .wvalid_o(s_axi_lite_i_wvalid)
+     ,.rd_error_o(rd_error_led_o)
+     ,.wr_error_o(wr_error_led_o)
+     ,.done_o(done_led_o)
+     );
 
-         // DDR3 control signals and other direct pass-through
-         ,.ddr3_dq      (ddr3_dq)
-         ,.ddr3_dqs_n   (ddr3_dqs_n)
-         ,.ddr3_dqs_p   (ddr3_dqs_p)
-
-         ,.ddr3_addr    (ddr3_addr)
-         ,.ddr3_ba      (ddr3_ba)
-         ,.ddr3_ras_n   (ddr3_ras_n)
-         ,.ddr3_cas_n   (ddr3_cas_n)
-         ,.ddr3_we_n    (ddr3_we_n)
-         ,.ddr3_reset_n (ddr3_reset_n)
-         ,.ddr3_ck_p    (ddr3_ck_p)
-         ,.ddr3_ck_n    (ddr3_ck_n)
-         ,.ddr3_cke     (ddr3_cke)
-
-         ,.ddr3_cs_n    (ddr3_cs_n)
-
-         ,.ddr3_dm      (ddr3_dm)
-
-         ,.ddr3_odt      (ddr3_odt)
-
-         ,.init_calib_complete_o(init_calib_complete_lo)
-
-         // BP core memory interface
-         ,.dma_pkt_i            (dram_controller_dma_pkt_li)
-         ,.dma_pkt_v_i          (dram_controller_dma_pkt_v_li)
-         ,.dma_pkt_yumi_o       (dram_controller_dma_pkt_yumi_lo)
-
-         ,.dma_data_o           (dram_controller_dma_data_lo)
-         ,.dma_data_v_o         (dram_controller_dma_data_v_lo)
-         ,.dma_data_ready_and_i (dram_controller_dma_data_ready_and_li)
-
-         ,.dma_data_i           (dram_controller_dma_data_li)
-         ,.dma_data_v_i         (dram_controller_dma_data_v_li)
-         ,.dma_data_yumi_o      (dram_controller_dma_data_yumi_lo)
-         );
-
-
-    // FPGA Host
-    bp_fpga_host
-      #(.bp_params_p              (bp_params_p)
-        ,.nbf_addr_width_p        (nbf_addr_width_p)
-        ,.nbf_data_width_p        (nbf_data_width_p)
-        ,.uart_clk_per_bit_p      (uart_clk_per_bit_p)
-        ,.uart_data_bits_p        (uart_data_bits_p)
-        ,.uart_parity_bit_p       (uart_parity_bit_p)
-        ,.uart_parity_odd_p       (uart_parity_odd_p)
-        ,.uart_stop_bits_p        (uart_stop_bits_p)
-        ,.io_in_nbf_buffer_els_p  (io_in_nbf_buffer_els_p)
-        ,.io_out_nbf_buffer_els_p (io_out_nbf_buffer_els_p)
-        )
-        fpga_host
-        (.clk_i(core_clk_lo)
-         ,.reset_i(reset_core_clk_lo)
-
-         // to FPGA Host
-         ,.io_cmd_header_i     (fpga_host_io_cmd_li)
-         ,.io_cmd_data_i       (fpga_host_io_cmd_data_li)
-         ,.io_cmd_v_i          (fpga_host_io_cmd_v_li)
-         ,.io_cmd_ready_and_o  (fpga_host_io_cmd_ready_and_lo)
-         ,.io_cmd_last_i       (fpga_host_io_cmd_last_li)
-
-         ,.io_resp_header_o    (fpga_host_io_resp_lo)
-         ,.io_resp_data_o      (fpga_host_io_resp_data_lo)
-         ,.io_resp_v_o         (fpga_host_io_resp_v_lo)
-         ,.io_resp_yumi_i      (fpga_host_io_resp_yumi_li)
-         ,.io_resp_last_o      (fpga_host_io_resp_last_lo)
-
-         // from FPGA Host
-         ,.io_cmd_header_o     (fpga_host_io_cmd_lo)
-         ,.io_cmd_data_o       (fpga_host_io_cmd_data_lo)
-         ,.io_cmd_v_o          (fpga_host_io_cmd_v_lo)
-         ,.io_cmd_yumi_i       (fpga_host_io_cmd_yumi_li)
-         ,.io_cmd_last_o       (fpga_host_io_cmd_last_lo)
-
-         ,.io_resp_header_i    (fpga_host_io_resp_li)
-         ,.io_resp_data_i      (fpga_host_io_resp_data_li)
-         ,.io_resp_v_i         (fpga_host_io_resp_v_li)
-         ,.io_resp_ready_and_o (fpga_host_io_resp_ready_and_lo)
-         ,.io_resp_last_i      (fpga_host_io_resp_last_li)
-
-         // UART
-         ,.rx_i(uart_rx_i)
-         ,.tx_o(uart_tx_o)
-
-         // UART error
-         ,.error_o(fpga_host_error_lo)
-        );
-
-
-    // Black Parrot core
-    bp_unicore
-      #(.bp_params_p(bp_params_p))
-      core
-      (.clk_i(core_clk_lo)
-       ,.reset_i(reset_core_clk_lo)
-
-       // I/O to FPGA Host
-       ,.io_cmd_header_o      (fpga_host_io_cmd_li)
-       ,.io_cmd_data_o        (fpga_host_io_cmd_data_li)
-       ,.io_cmd_v_o           (fpga_host_io_cmd_v_li)
-       ,.io_cmd_ready_and_i   (fpga_host_io_cmd_ready_and_lo)
-       ,.io_cmd_last_o        (fpga_host_io_cmd_last_li)
-
-       ,.io_resp_header_i     (fpga_host_io_resp_lo)
-       ,.io_resp_data_i       (fpga_host_io_resp_data_lo)
-       ,.io_resp_v_i          (fpga_host_io_resp_v_lo)
-       ,.io_resp_yumi_o       (fpga_host_io_resp_yumi_li)
-       ,.io_resp_last_i       (fpga_host_io_resp_last_lo)
-
-       // I/O from FPGA host
-       ,.io_cmd_header_i      (fpga_host_io_cmd_lo)
-       ,.io_cmd_data_i        (fpga_host_io_cmd_data_lo)
-       ,.io_cmd_v_i           (fpga_host_io_cmd_v_lo)
-       ,.io_cmd_yumi_o        (fpga_host_io_cmd_yumi_li)
-       ,.io_cmd_last_i        (fpga_host_io_cmd_last_lo)
-
-       ,.io_resp_header_o     (fpga_host_io_resp_li)
-       ,.io_resp_data_o       (fpga_host_io_resp_data_li)
-       ,.io_resp_v_o          (fpga_host_io_resp_v_li)
-       ,.io_resp_ready_and_i  (fpga_host_io_resp_ready_and_lo)
-       ,.io_resp_last_o       (fpga_host_io_resp_last_li)
-
-       // DRAM interface
-       ,.dma_pkt_o            (dram_controller_dma_pkt_li)
-       ,.dma_pkt_v_o          (dram_controller_dma_pkt_v_li)
-       ,.dma_pkt_yumi_i       (dram_controller_dma_pkt_yumi_lo)
-
-       ,.dma_data_i           (dram_controller_dma_data_lo)
-       ,.dma_data_v_i         (dram_controller_dma_data_v_lo)
-       ,.dma_data_ready_and_o (dram_controller_dma_data_ready_and_li)
-
-       ,.dma_data_o           (dram_controller_dma_data_li)
-       ,.dma_data_v_o         (dram_controller_dma_data_v_li)
-       ,.dma_data_yumi_i      (dram_controller_dma_data_yumi_lo)
-      );
 
 endmodule

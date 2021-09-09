@@ -1,22 +1,22 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
+// Company:
+// Engineer:
+//
 // Create Date: 09/08/2021 03:16:28 PM
-// Design Name: 
+// Design Name:
 // Module Name: arty
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -42,7 +42,7 @@ module arty
   reset_led_o,
   external_clock_i,
   external_reset_n_i);
-  
+
   output [13:0]ddr3_sdram_addr;
   output [2:0]ddr3_sdram_ba;
   output ddr3_sdram_cas_n;
@@ -64,9 +64,9 @@ module arty
   output logic reset_led_o;
   input external_clock_i;
   input external_reset_n_i;
-  
+
   assign reset_led_o = external_reset_n_i ? 1'b0 : 1'b1;
-  
+
   // DDR to external
   wire [13:0]ddr3_sdram_addr;
   wire [2:0]ddr3_sdram_ba;
@@ -84,9 +84,9 @@ module arty
   wire ddr3_sdram_reset_n;
   wire ddr3_sdram_we_n;
   wire mig_ddr_init_calib_complete_o;
-  
+
   wire proc_reset_o;
-  
+
   // AXI
   wire s_axi_clk_20M_o; // connects to traffic gen as clock
   wire [27:0]s_axi_lite_i_araddr;
@@ -109,11 +109,11 @@ module arty
   wire [7:0]s_axi_lite_i_wstrb;
   wire s_axi_lite_i_wvalid;
   wire [0:0]s_axi_reset_n_o; // connects to traffic gen as reset_n_i
-  
+
   // external
   wire external_clock_i;
   wire external_reset_n_i;
-  
+
   axi4_lite_traffic_gen mem_traffic_gen
     (.clk_i(s_axi_clk_20M_o),
     .reset_n_i(s_axi_reset_n_o),
@@ -145,7 +145,7 @@ module arty
     ,.wr_error_o(wr_error_led_o)
     ,.done_o(done_led_o)
     );
-  
+
   design_1_wrapper design_ip
    (.ddr3_sdram_addr(ddr3_sdram_addr),
     .ddr3_sdram_ba(ddr3_sdram_ba),
