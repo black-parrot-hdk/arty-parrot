@@ -1,3 +1,4 @@
+`include "bp_common_defines.svh"
 `include "bp_me_defines.svh"
 `include "bp_fpga_host_defines.svh"
 
