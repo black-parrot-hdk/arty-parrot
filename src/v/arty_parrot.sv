@@ -150,7 +150,7 @@ module arty_parrot
     .ddr3_sdram_reset_n(ddr3_sdram_reset_n),
     .ddr3_sdram_we_n(ddr3_sdram_we_n),
     .external_clock_i(external_clock_i),
-    .external_reset_n_i(external_reset_n_i)
+    .external_reset_n_i(external_reset_n_i),
     .mig_ddr_init_calib_complete_o(mig_ddr_init_calib_complete_o),
     .proc_reset_o(proc_reset_o),
     .s_axi_clk_20M_o(axi_clk),
@@ -174,7 +174,7 @@ module arty_parrot
     .s_axi_lite_i_wready(s_axi_lite_i_wready),
     .s_axi_lite_i_wstrb(s_axi_lite_i_wstrb),
     .s_axi_lite_i_wvalid(s_axi_lite_i_wvalid),
-    .tie_high(1'b1)
+    .tie_high(1'b1),
     .tie_low(1'b0)
     );
 

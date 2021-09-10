@@ -40,7 +40,7 @@ gen_bit: | $(PROJECT_DIR)
 	vivado -mode batch -source $(TCL_DIR)/generate_bitstream.tcl -tclargs --jobs $(JOBS) --project $(PROJECT_DIR)/$(PROJECT_NAME).xpr
 
 clean_proj:
-	cd proj && rm -rf $(PROJECT_DIR) && rm -f *.jou *.log
+	rm -rf $(PROJECT_DIR) && rm -f *.jou *.log
 
 $(PROJECT_DIR):
 	$(error $(PROJECT_DIR) required to generate bitstream)
