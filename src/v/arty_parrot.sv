@@ -13,7 +13,7 @@ module arty_parrot
     , parameter nbf_data_width_p = dword_width_gp
     , localparam nbf_width_lp = `bp_fpga_host_nbf_width(nbf_addr_width_p, nbf_data_width_p)
 
-    , parameter uart_clk_per_bit_p = 10 // 20MHz clock / 2M Baud
+    , parameter uart_clk_per_bit_p = 74 // 37 MHz clock, 500000 baud
     , parameter uart_data_bits_p = 8 // between 5 and 9 bits
     , parameter uart_parity_bit_p = 0 // 0 or 1
     , parameter uart_parity_odd_p = 0 // 0 for even parity, 1 for odd parity
@@ -181,9 +181,12 @@ module arty_parrot
     .external_clock_i(external_clock_i),
     .external_reset_n_i(external_reset_n_i),
     .mig_ddr_init_calib_complete_o(mig_ddr_init_calib_complete_o),
-    .proc_reset_o(proc_reset_o),
-    .s_axi_clk_20M_o(axi_clk),
-    .s_axi_reset_n_o(axi_rst_n)
+    .proc_reset_o(proc_reset_o)
+    ,.clk_111M_o()
+    ,.clk_74M_o()
+    ,.clk_37M_o(axi_clk)
+    ,.clk_18M_o()
+    ,.s_axi_reset_n_o(axi_rst_n)
 
     // AXI S Interface Write Address Ports
     ,.s_axi_awid                     (s_axi_awid)
