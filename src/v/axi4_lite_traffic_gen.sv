@@ -1,22 +1,22 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
+// Company:
+// Engineer:
+//
 // Create Date: 09/08/2021 03:47:42 PM
-// Design Name: 
+// Design Name:
 // Module Name: axi4_lite_traffic_gen
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -52,10 +52,10 @@ module axi4_lite_traffic_gen(
   , output logic wr_error_o
   , output logic done_o
   );
-  
+
   logic [27:0] addr_r, addr_n;
   logic [63:0] data_r, data_n;
-  
+
   typedef enum logic [2:0]
   {
     e_reset
@@ -72,7 +72,7 @@ module axi4_lite_traffic_gen(
   always_ff @(posedge clk_i) begin
     reset_r <= reset_n_i;
   end
-  
+
   logic rd_error_r, rd_error_n;
   assign rd_error_o = rd_error_r;
   logic wr_error_r, wr_error_n;
@@ -92,33 +92,33 @@ module axi4_lite_traffic_gen(
       wr_error_r <= wr_error_r | wr_error_n;
     end
   end
-  
+
   always_comb begin
     state_n = state_r;
     data_n = data_r;
     addr_n = addr_r;
     rd_error_n = 1'b0;
     wr_error_n = 1'b0;
-  
+
     awaddr_o = '0;
     awvalid_o = 1'b0;
     awprot_o = 3'b001;
-    
+
     araddr_o = '0;
     arvalid_o = 1'b0;
     arprot_o = 3'b001;
-    
+
     bready_o = 1'b0;
-    
+
     rready_o = '0;
     rresp_o = '0;
-    
+
     wdata_o = '0;
     wstrb_o = '0;
     wvalid_o = '0;
-    
+
     done_o = '0;
-    
+
     unique case(state_r)
       e_reset: begin
         state_n = e_write_send;
@@ -169,5 +169,5 @@ module axi4_lite_traffic_gen(
       end
     endcase
   end
-  
+
 endmodule

@@ -2,7 +2,7 @@
 
 ## Set basic project info with sane defaults
 set arty_dir ".."
-set project_name "arty-parrot-TEST"
+set project_name "arty-parrot"
 
 set script_file "generate_project.tcl"
 

@@ -402,8 +402,8 @@ proc create_root_design { parentCell } {
   connect_bd_net -net rst_s_axi_20M_interconnect_aresetn [get_bd_ports s_axi_reset_n_o] [get_bd_pins axi_clock_converter_0/s_axi_aresetn] [get_bd_pins axi_protocol_convert_0/aresetn] [get_bd_pins rst_s_axi_20M/interconnect_aresetn]
   connect_bd_net -net sys_clock_1 [get_bd_ports external_clock_i] [get_bd_pins ddr_clocks/clk_in1]
   connect_bd_net -net sys_reset_mb_reset [get_bd_ports proc_reset_o] [get_bd_pins rst_s_axi_20M/mb_reset]
-  connect_bd_net -net tie_high_dout [get_bd_ports tie_low] [get_bd_pins rst_mig_ddr_83M/aux_reset_in] [get_bd_pins rst_s_axi_20M/aux_reset_in]
-  connect_bd_net -net tie_low_dout [get_bd_ports tie_high] [get_bd_pins rst_mig_ddr_83M/mb_debug_sys_rst] [get_bd_pins rst_s_axi_20M/mb_debug_sys_rst]
+  connect_bd_net -net tie_high_dout [get_bd_ports tie_high] [get_bd_pins rst_mig_ddr_83M/aux_reset_in] [get_bd_pins rst_s_axi_20M/aux_reset_in]
+  connect_bd_net -net tie_low_dout [get_bd_ports tie_low] [get_bd_pins rst_mig_ddr_83M/mb_debug_sys_rst] [get_bd_pins rst_s_axi_20M/mb_debug_sys_rst]
 
   # Create address segments
   assign_bd_address -offset 0x00000000 -range 0x10000000 -target_address_space [get_bd_addr_spaces s_axi_lite_i] [get_bd_addr_segs mig_ddr/memmap/memaddr] -force
