@@ -133,7 +133,7 @@ module arty_parrot
   wire [7:0]s_axi_lite_i_wstrb;
   wire s_axi_lite_i_wvalid;
 
-  design_1_wrapper design_ip
+  memory_design_wrapper memory_ip_subsystem
    (.ddr3_sdram_addr(ddr3_sdram_addr),
     .ddr3_sdram_ba(ddr3_sdram_ba),
     .ddr3_sdram_cas_n(ddr3_sdram_cas_n),
@@ -149,6 +149,8 @@ module arty_parrot
     .ddr3_sdram_ras_n(ddr3_sdram_ras_n),
     .ddr3_sdram_reset_n(ddr3_sdram_reset_n),
     .ddr3_sdram_we_n(ddr3_sdram_we_n),
+    .external_clock_i(external_clock_i),
+    .external_reset_n_i(external_reset_n_i)
     .mig_ddr_init_calib_complete_o(mig_ddr_init_calib_complete_o),
     .proc_reset_o(proc_reset_o),
     .s_axi_clk_20M_o(axi_clk),
@@ -172,8 +174,8 @@ module arty_parrot
     .s_axi_lite_i_wready(s_axi_lite_i_wready),
     .s_axi_lite_i_wstrb(s_axi_lite_i_wstrb),
     .s_axi_lite_i_wvalid(s_axi_lite_i_wvalid),
-    .external_clock_i(external_clock_i),
-    .external_reset_n_i(external_reset_n_i)
+    .tie_high(1'b1)
+    .tie_low(1'b0)
     );
 
   // FPGA Host
