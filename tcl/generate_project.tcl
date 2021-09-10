@@ -1,10 +1,8 @@
 # Script to automatically generate BlackParrot on Arty A7-100T
 
 ## Set basic project info with sane defaults
-set blackparrot_dir "./rtl"
-set arty_dir "."
+set arty_dir ".."
 set project_name "arty-parrot-TEST"
-set project_dir "./proj"
 
 set script_file "generate_project.tcl"
 
@@ -39,10 +37,8 @@ if { $::argc > 0 } {
   for {set i 0} {$i < $::argc} {incr i} {
     set option [string trim [lindex $::argv $i]]
     switch -regexp -- $option {
-      "--blackparrot_dir"   { incr i; set blackparrot_dir [lindex $::argv $i] }
       "--arty_dir"   { incr i; set arty_dir [lindex $::argv $i] }
       "--project_name" { incr i; set project_name [lindex $::argv $i] }
-      "--project_dir" { incr i; set project_dir [lindex $::argv $i] }
       "--help"         { print_help }
       default {
         if { [regexp {^-} $option] } {
@@ -55,7 +51,11 @@ if { $::argc > 0 } {
 }
 
 # variables that depend on args
+set blackparrot_dir "$arty_dir/rtl"
 set board_repo_path "$arty_dir/common/board_files"
+set project_dir "$arty_dir/proj"
+set tcl_dir "$arty_dir/tcl"
+set arty_src_dir "$arty_dir/src"
 
 ## Setup the basic project info
 
@@ -88,7 +88,7 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 }
 
 ## Create the memory_design block diagram, wrapper, and add to wrapper to project
-set memory_design_tcl "memory_design.tcl"
+set memory_design_tcl "${tcl_dir}/memory_design.tcl"
 puts "Reading block design: ${memory_design_tcl}\n"
 source $memory_design_tcl
 
@@ -141,34 +141,20 @@ lassign [load_bp_sources_from_flist $blackparrot_dir] flist_include_dirs flist_s
 
 # TODO: replace below with external flist file
 set additional_include_dirs [list \
-  [file normalize "${arty_dir}/src/include/" ] \
+  [file normalize "${arty_src_dir}/include/" ] \
 ]
 set additional_source_files [list \
-  [file normalize "${arty_dir}/src/include/bp_fpga_host_pkg.sv" ] \
-  [file normalize "${arty_dir}/src/v/uart_rx.sv" ] \
-  [file normalize "${arty_dir}/src/v/uart_tx.sv" ] \
-  [file normalize "${arty_dir}/src/v/bp_fpga_host.sv" ] \
-  [file normalize "${arty_dir}/src/v/bp_fpga_host_io_in.sv" ] \
-  [file normalize "${arty_dir}/src/v/bp_fpga_host_io_out.sv" ] \
-  [file normalize "${arty_dir}/src/v/arty_parrot.sv" ] \
+  [file normalize "${arty_src_dir}/include/bp_fpga_host_pkg.sv" ] \
+  [file normalize "${arty_src_dir}/v/uart_rx.sv" ] \
+  [file normalize "${arty_src_dir}/v/uart_tx.sv" ] \
+  [file normalize "${arty_src_dir}/v/bp_fpga_host.sv" ] \
+  [file normalize "${arty_src_dir}/v/bp_fpga_host_io_in.sv" ] \
+  [file normalize "${arty_src_dir}/v/bp_fpga_host_io_out.sv" ] \
+  [file normalize "${arty_src_dir}/v/arty_parrot.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_tx.v" ] \
 ]
-set xilinx_ip_configurations [list \
-  [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_7series_0.xci" ] \
-  [file normalize "${arty_dir}/proj/ip/dram_clk_gen/dram_clk_gen.xci" ] \
-  [file normalize "${arty_dir}/proj/ip/axi_memory_clock_converter/axi_memory_clock_converter.xci" ] \
-]
-set xilinx_ip_output_dirs [list \
-  [file normalize "${arty_dir}/proj/${project_name}/generated/mig_7series_0/" ] \
-  [file normalize "${arty_dir}/proj/${project_name}/generated/dram_clk_gen" ] \
-  [file normalize "${arty_dir}/proj/${project_name}/generated/axi_memory_clock_converter" ] \
-]
-
-foreach ip_dir $xilinx_ip_output_dirs {
-  file mkdir $ip_dir
-}
 
 set all_include_dirs [concat $flist_include_dirs $additional_include_dirs]
 set_property include_dirs $all_include_dirs [current_fileset]
@@ -177,26 +163,11 @@ set_property include_dirs $all_include_dirs [current_fileset]
 set obj [get_filesets sources_1]
 add_files -norecurse -scan_for_includes -fileset $obj $flist_source_files
 add_files -norecurse -scan_for_includes -fileset $obj $additional_source_files
-add_files -fileset $obj [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_a.prj" ]
-add_files -fileset $obj $xilinx_ip_configurations
 
 # Set 'sources_1' fileset file properties for remote files
 foreach source_file [concat $flist_source_files $additional_source_files] {
   set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$source_file"]]
   set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-}
-
-set file [file normalize "${arty_dir}/proj/ip/mig_7series_0/mig_a.prj" ]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
-set_property -name "scoped_to_cells" -value "mig_7series_0" -objects $file_obj
-
-foreach ip_file $xilinx_ip_configurations {
-  set file_obj [get_files -of_objects [get_filesets sources_1] [list "$ip_file"]]
-  set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
-  set_property -name "registered_with_manager" -value "1" -objects $file_obj
-  if { ![get_property "is_locked" $file_obj] } {
-    set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
-  }
 }
 
 # Set 'sources_1' fileset file properties for local files
@@ -216,9 +187,9 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${arty_dir}/proj/xdc/constraints.xdc]"
+set file "[file normalize ${arty_src_dir}/xdc/constraints.xdc]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
-set file "${arty_dir}/proj/xdc/constraints.xdc"
+set file "${arty_src_dir}/xdc/constraints.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
@@ -226,50 +197,51 @@ set_property -name "file_type" -value "XDC" -objects $file_obj
 # Set 'constrs_1' fileset properties
 set obj [get_filesets constrs_1]
 
-# Create 'sim_1' fileset (if not found)
-if {[string equal [get_filesets -quiet sim_1] ""]} {
-  create_fileset -simset sim_1
-}
-
-# Set 'sim_1' fileset object
-set obj [get_filesets sim_1]
-set sim_include_dirs [list \
-  [file normalize "${arty_dir}/src/external"] \
-]
-set sim_source_files [list \
-  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
-  [file normalize "${arty_dir}/src/test/mig_ddr3_ram_testbench.sv"] \
-  [file normalize "${arty_dir}/src/test/arty_parrot_testbench.sv"] \
-  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
-  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
-]
-set ddr3_model_path [file normalize "${arty_dir}/src/external/ddr3_model.sv"]
-if {[file exists $ddr3_model_path]} {
-  lappend sim_source_files $ddr3_model_path
-} else {
-  puts "WARNING: DDR3 model files not found at \"${arty_dir}/src/external\", some testbenches will not work"
-}
-
-set_property include_dirs [concat $sim_include_dirs $all_include_dirs] $obj
-add_files -norecurse -scan_for_includes -fileset $obj $sim_source_files
-
-
-# Set 'sim_1' fileset file properties for remote files
-foreach source_file $sim_source_files {
-  set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$source_file"]]
-  set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
-  set_property -name "used_in" -value "simulation" -objects $file_obj
-  set_property -name "used_in_implementation" -value "0" -objects $file_obj
-  set_property -name "used_in_synthesis" -value "0" -objects $file_obj
-}
-
-# Set 'sim_1' fileset file properties for local files
-# None
-
-# Set 'sim_1' fileset properties
-set obj [get_filesets sim_1]
-set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "arty_parrot_testbench" -objects $obj
-set_property -name "top_auto_set" -value "0" -objects $obj
-set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
+## TODO: simulation stuff
+## Create 'sim_1' fileset (if not found)
+#if {[string equal [get_filesets -quiet sim_1] ""]} {
+#  create_fileset -simset sim_1
+#}
+#
+## Set 'sim_1' fileset object
+#set obj [get_filesets sim_1]
+#set sim_include_dirs [list \
+#  [file normalize "${arty_src_dir}/external"] \
+#]
+#set sim_source_files [list \
+#  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_pkg.v" ] \
+#  [file normalize "${arty_src_dir}/test/mig_ddr3_ram_testbench.sv"] \
+#  [file normalize "${arty_src_dir}/test/arty_parrot_testbench.sv"] \
+#  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_reset_gen.v"] \
+#  [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_test/bsg_nonsynth_clock_gen.v"] \
+#]
+#set ddr3_model_path [file normalize "${arty_src_dir}/external/ddr3_model.sv"]
+#if {[file exists $ddr3_model_path]} {
+#  lappend sim_source_files $ddr3_model_path
+#} else {
+#  puts "WARNING: DDR3 model files not found at \"${arty_src_dir}/external\", some testbenches will not work"
+#}
+#
+#set_property include_dirs [concat $sim_include_dirs $all_include_dirs] $obj
+#add_files -norecurse -scan_for_includes -fileset $obj $sim_source_files
+#
+#
+## Set 'sim_1' fileset file properties for remote files
+#foreach source_file $sim_source_files {
+#  set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$source_file"]]
+#  set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
+#  set_property -name "used_in" -value "simulation" -objects $file_obj
+#  set_property -name "used_in_implementation" -value "0" -objects $file_obj
+#  set_property -name "used_in_synthesis" -value "0" -objects $file_obj
+#}
+#
+## Set 'sim_1' fileset file properties for local files
+## None
+#
+## Set 'sim_1' fileset properties
+#set obj [get_filesets sim_1]
+#set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
+#set_property -name "top" -value "arty_parrot_testbench" -objects $obj
+#set_property -name "top_auto_set" -value "0" -objects $obj
+#set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
