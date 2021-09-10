@@ -148,6 +148,7 @@ set additional_source_files [list \
   [file normalize "${arty_src_dir}/v/bp_fpga_host.sv" ] \
   [file normalize "${arty_src_dir}/v/bp_fpga_host_io_in.sv" ] \
   [file normalize "${arty_src_dir}/v/bp_fpga_host_io_out.sv" ] \
+  [file normalize "${arty_src_dir}/v/axi4_lite_traffic_gen.sv" ] \
   [file normalize "${arty_src_dir}/v/arty_parrot.sv" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi.v" ] \
   [file normalize "${blackparrot_dir}/external/basejump_stl/bsg_cache/bsg_cache_to_axi_rx.v" ] \
