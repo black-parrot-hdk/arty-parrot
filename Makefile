@@ -3,8 +3,11 @@ TOP ?= $(shell git rev-parse --show-toplevel)
 export BP_SDK_DIR ?= $(TOP)/sdk
 export BP_RTL_DIR ?= $(TOP)/rtl
 
+TCL_DIR = $(TOP)/tcl
+PROJECT_NAME ?= arty-parrot
+
 JOBS ?= 8
-PROJECT_DIR ?= $(TOP)/proj/arty-parrot
+PROJECT_DIR ?= $(TOP)/proj/$(PROJECT_NAME)
 
 .PHONY: prep prep_lite prep_bsg bleach_all checkout checkout_sdk checkout_rtl
 .PHONY: gen_proj gen_bit clean_proj
@@ -31,10 +34,10 @@ prep_bsg: prep
 	$(MAKE) -C $(BP_RTL_DIR) tools_bsg
 
 gen_proj:
-	cd proj && vivado -mode batch -source generate_project.tcl -tclargs --blackparrot_dir $(BP_RTL_DIR) --arty_dir $(TOP)
+	vivado -mode batch -source $(TCL_DIR)/generate_project.tcl -tclargs --arty_dir $(TOP) --project_name $(PROJECT_NAME)
 
 gen_bit: | $(PROJECT_DIR)
-	cd proj && vivado -mode batch -source generate_bitstream.tcl -tclargs --jobs $(JOBS)
+	vivado -mode batch -source $(TCL_DIR)/generate_bitstream.tcl -tclargs --jobs $(JOBS) --project $(PROJECT_DIR)/$(PROJECT_NAME).xpr
 
 clean_proj:
 	cd proj && rm -rf $(PROJECT_DIR) && rm -f *.jou *.log
