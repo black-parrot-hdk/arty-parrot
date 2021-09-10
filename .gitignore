@@ -1,1 +1,3 @@
-vivado*
+*.jou
+*.log
+py/__pycache__/

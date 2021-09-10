@@ -1,7 +1,0 @@
-arty-parrot/
-*.jou
-*.log
-
-ip/*/*.v
-ip/*/*.vhdl
-ip/*/*.dcp
