@@ -24,18 +24,18 @@ create_bd_design $design_name
 current_bd_design $design_name
 common::send_gid_msg -ssname BD::TCL -id 2005 -severity "INFO" "Currently the variable <design_name> is equal to \"$design_name\"."
 
+set bCheckIPsPassed 1
 ##################################################################
 # CHECK IPs
 ##################################################################
-set bCheckIPsPassed 1
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_clock_converter:2.1\
-xilinx.com:ip:axi_protocol_converter:2.1\
 xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:mig_7series:4.2\
 xilinx.com:ip:proc_sys_reset:5.0\
+xilinx.com:ip:xlconstant:1.1\
 "
 
    set list_ips_missing ""
@@ -65,7 +65,7 @@ if { $bCheckIPsPassed != 1 } {
 # MIG PRJ FILE TCL PROCs
 ##################################################################
 
-proc write_mig_prj_file { str_mig_prj_filepath } {
+proc write_mig_file_memory_design_mig_ddr_0 { str_mig_prj_filepath } {
 
    file mkdir [ file dirname "$str_mig_prj_filepath" ]
    set mig_prj_file [open $str_mig_prj_filepath  w+]
@@ -208,13 +208,14 @@ proc write_mig_prj_file { str_mig_prj_filepath } {
 
    close $mig_prj_file
 }
-# End of write_mig_prj_file()
+# End of write_mig_file_memory_design_mig_ddr_0()
 
 
 
 ##################################################################
 # DESIGN PROCs
 ##################################################################
+
 
 
 # Procedure to create entire design; Provide argument to make
@@ -252,7 +253,7 @@ proc create_root_design { parentCell } {
   # Create interface ports
   set ddr3_sdram [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:ddrx_rtl:1.0 ddr3_sdram ]
 
-  set s_axi_lite_i [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi_lite_i ]
+  set s_axi [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi ]
   set_property -dict [ list \
    CONFIG.ADDR_WIDTH {28} \
    CONFIG.ARUSER_WIDTH {0} \
@@ -261,28 +262,29 @@ proc create_root_design { parentCell } {
    CONFIG.DATA_WIDTH {64} \
    CONFIG.FREQ_HZ {20258551} \
    CONFIG.HAS_BRESP {1} \
-   CONFIG.HAS_BURST {0} \
-   CONFIG.HAS_CACHE {0} \
-   CONFIG.HAS_LOCK {0} \
+   CONFIG.HAS_BURST {1} \
+   CONFIG.HAS_CACHE {1} \
+   CONFIG.HAS_LOCK {1} \
    CONFIG.HAS_PROT {1} \
-   CONFIG.HAS_QOS {0} \
-   CONFIG.HAS_REGION {0} \
+   CONFIG.HAS_QOS {1} \
+   CONFIG.HAS_REGION {1} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
-   CONFIG.ID_WIDTH {0} \
+   CONFIG.ID_WIDTH {4} \
    CONFIG.MAX_BURST_LENGTH {1} \
    CONFIG.NUM_READ_OUTSTANDING {1} \
    CONFIG.NUM_READ_THREADS {1} \
    CONFIG.NUM_WRITE_OUTSTANDING {1} \
    CONFIG.NUM_WRITE_THREADS {1} \
-   CONFIG.PROTOCOL {AXI4LITE} \
+   CONFIG.PHASE {0} \
+   CONFIG.PROTOCOL {AXI4} \
    CONFIG.READ_WRITE_MODE {READ_WRITE} \
    CONFIG.RUSER_BITS_PER_BYTE {0} \
    CONFIG.RUSER_WIDTH {0} \
    CONFIG.SUPPORTS_NARROW_BURST {0} \
    CONFIG.WUSER_BITS_PER_BYTE {0} \
    CONFIG.WUSER_WIDTH {0} \
-   ] $s_axi_lite_i
+   ] $s_axi
 
 
   # Create ports
@@ -302,12 +304,10 @@ proc create_root_design { parentCell } {
  ] $proc_reset_o
   set s_axi_clk_20M_o [ create_bd_port -dir O -type clk s_axi_clk_20M_o ]
   set_property -dict [ list \
-   CONFIG.ASSOCIATED_BUSIF {s_axi_lite_i} \
+   CONFIG.ASSOCIATED_BUSIF {s_axi} \
    CONFIG.FREQ_HZ {20258551} \
  ] $s_axi_clk_20M_o
   set s_axi_reset_n_o [ create_bd_port -dir O -from 0 -to 0 -type rst s_axi_reset_n_o ]
-  set tie_high [ create_bd_port -dir I tie_high ]
-  set tie_low [ create_bd_port -dir I tie_low ]
 
   # Create instance: axi_clock_converter_0, and set properties
   set axi_clock_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_clock_converter:2.1 axi_clock_converter_0 ]
@@ -318,16 +318,6 @@ proc create_root_design { parentCell } {
    CONFIG.ID_WIDTH {4} \
    CONFIG.SYNCHRONIZATION_STAGES {4} \
  ] $axi_clock_converter_0
-
-  # Create instance: axi_protocol_convert_0, and set properties
-  set axi_protocol_convert_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_protocol_converter:2.1 axi_protocol_convert_0 ]
-  set_property -dict [ list \
-   CONFIG.ADDR_WIDTH {28} \
-   CONFIG.DATA_WIDTH {64} \
-   CONFIG.MI_PROTOCOL {AXI4} \
-   CONFIG.SI_PROTOCOL {AXI4LITE} \
-   CONFIG.TRANSLATION_MODE {2} \
- ] $axi_protocol_convert_0
 
   # Create instance: ddr_clocks, and set properties
   set ddr_clocks [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 ddr_clocks ]
@@ -363,7 +353,7 @@ proc create_root_design { parentCell } {
   set str_mig_file_name mig_a.prj
   set str_mig_file_path ${str_mig_folder}/${str_mig_file_name}
 
-  write_mig_prj_file $str_mig_file_path
+  write_mig_file_memory_design_mig_ddr_0 $str_mig_file_path
 
   set_property -dict [ list \
    CONFIG.BOARD_MIG_PARAM {ddr3_sdram} \
@@ -382,10 +372,18 @@ proc create_root_design { parentCell } {
    CONFIG.USE_BOARD_FLOW {true} \
  ] $rst_s_axi_20M
 
+  # Create instance: rst_tie_high, and set properties
+  set rst_tie_high [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 rst_tie_high ]
+
+  # Create instance: rst_tie_low, and set properties
+  set rst_tie_low [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 rst_tie_low ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {0} \
+ ] $rst_tie_low
+
   # Create interface connections
-  connect_bd_intf_net -intf_net S_AXI_0_1 [get_bd_intf_ports s_axi_lite_i] [get_bd_intf_pins axi_protocol_convert_0/S_AXI]
+  connect_bd_intf_net -intf_net S_AXI_0_1 [get_bd_intf_ports s_axi] [get_bd_intf_pins axi_clock_converter_0/S_AXI]
   connect_bd_intf_net -intf_net axi_clock_converter_0_M_AXI [get_bd_intf_pins axi_clock_converter_0/M_AXI] [get_bd_intf_pins mig_ddr/S_AXI]
-  connect_bd_intf_net -intf_net axi_protocol_convert_0_M_AXI [get_bd_intf_pins axi_clock_converter_0/S_AXI] [get_bd_intf_pins axi_protocol_convert_0/M_AXI]
   connect_bd_intf_net -intf_net mig_7series_0_DDR3 [get_bd_intf_ports ddr3_sdram] [get_bd_intf_pins mig_ddr/DDR3]
 
   # Create port connections
@@ -395,18 +393,18 @@ proc create_root_design { parentCell } {
   connect_bd_net -net mig_7series_0_ui_clk_sync_rst [get_bd_pins mig_ddr/ui_clk_sync_rst] [get_bd_pins rst_mig_ddr_83M/ext_reset_in]
   connect_bd_net -net mig_ddr_init_calib_complete [get_bd_ports mig_ddr_init_calib_complete_o] [get_bd_pins mig_ddr/init_calib_complete]
   connect_bd_net -net mig_ddr_mmcm_locked [get_bd_pins mig_ddr/mmcm_locked] [get_bd_pins rst_mig_ddr_83M/dcm_locked] [get_bd_pins rst_s_axi_20M/dcm_locked]
-  connect_bd_net -net mig_ddr_ui_addn_clk_0 [get_bd_ports s_axi_clk_20M_o] [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins axi_protocol_convert_0/aclk] [get_bd_pins mig_ddr/ui_addn_clk_0] [get_bd_pins rst_s_axi_20M/slowest_sync_clk]
+  connect_bd_net -net mig_ddr_ui_addn_clk_0 [get_bd_ports s_axi_clk_20M_o] [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins mig_ddr/ui_addn_clk_0] [get_bd_pins rst_s_axi_20M/slowest_sync_clk]
   connect_bd_net -net reset_1 [get_bd_ports external_reset_n_i] [get_bd_pins ddr_clocks/resetn] [get_bd_pins mig_ddr/sys_rst] [get_bd_pins rst_s_axi_20M/ext_reset_in]
   connect_bd_net -net rst_mig_ddr_83M_interconnect_aresetn [get_bd_pins axi_clock_converter_0/m_axi_aresetn] [get_bd_pins rst_mig_ddr_83M/interconnect_aresetn]
   connect_bd_net -net rst_mig_ddr_83M_peripheral_aresetn [get_bd_pins mig_ddr/aresetn] [get_bd_pins rst_mig_ddr_83M/peripheral_aresetn]
-  connect_bd_net -net rst_s_axi_20M_interconnect_aresetn [get_bd_ports s_axi_reset_n_o] [get_bd_pins axi_clock_converter_0/s_axi_aresetn] [get_bd_pins axi_protocol_convert_0/aresetn] [get_bd_pins rst_s_axi_20M/interconnect_aresetn]
+  connect_bd_net -net rst_s_axi_20M_interconnect_aresetn [get_bd_ports s_axi_reset_n_o] [get_bd_pins axi_clock_converter_0/s_axi_aresetn] [get_bd_pins rst_s_axi_20M/interconnect_aresetn]
   connect_bd_net -net sys_clock_1 [get_bd_ports external_clock_i] [get_bd_pins ddr_clocks/clk_in1]
   connect_bd_net -net sys_reset_mb_reset [get_bd_ports proc_reset_o] [get_bd_pins rst_s_axi_20M/mb_reset]
-  connect_bd_net -net tie_high_dout [get_bd_ports tie_high] [get_bd_pins rst_mig_ddr_83M/aux_reset_in] [get_bd_pins rst_s_axi_20M/aux_reset_in]
-  connect_bd_net -net tie_low_dout [get_bd_ports tie_low] [get_bd_pins rst_mig_ddr_83M/mb_debug_sys_rst] [get_bd_pins rst_s_axi_20M/mb_debug_sys_rst]
+  connect_bd_net -net tie_high_dout [get_bd_pins rst_mig_ddr_83M/aux_reset_in] [get_bd_pins rst_s_axi_20M/aux_reset_in] [get_bd_pins rst_tie_high/dout]
+  connect_bd_net -net tie_low_dout [get_bd_pins rst_mig_ddr_83M/mb_debug_sys_rst] [get_bd_pins rst_s_axi_20M/mb_debug_sys_rst] [get_bd_pins rst_tie_low/dout]
 
   # Create address segments
-  assign_bd_address -offset 0x00000000 -range 0x10000000 -target_address_space [get_bd_addr_spaces s_axi_lite_i] [get_bd_addr_segs mig_ddr/memmap/memaddr] -force
+  assign_bd_address -offset 0x00000000 -range 0x10000000 -target_address_space [get_bd_addr_spaces s_axi] [get_bd_addr_segs mig_ddr/memmap/memaddr] -force
 
 
   # Restore current instance
@@ -433,4 +431,5 @@ proc create_root_design { parentCell } {
 ##################################################################
 
 create_root_design ""
+
 

@@ -95,7 +95,8 @@ module arty_parrot
   logic fpga_host_io_cmd_last_lo, fpga_host_io_resp_last_li;
 
   // bsg cache DRAM buses
-  // TODO: L2 fill width should be set to 64-bits (or whatever AXI lite data width is)
+  // TODO: assertion to confirm l2_fill_width is 64-bits (with tiny_l1 config,
+  // it is)
   logic [dma_pkt_width_lp-1:0] dram_controller_dma_pkt_li;
   logic                        dram_controller_dma_pkt_v_li;
   logic                        dram_controller_dma_pkt_yumi_lo;
