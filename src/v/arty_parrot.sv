@@ -47,7 +47,7 @@ module arty_parrot
      , input logic uart_rx_i
      , output logic uart_tx_o
 
-     , output logic error_led_o
+     //, output logic error_led_o
      , output logic reset_led_o
      , output logic rd_error_led_o
      , output logic wr_error_led_o
@@ -75,6 +75,7 @@ module arty_parrot
 
   logic fpga_host_error_lo;
   assign reset_led_o = external_reset_n_i ? 1'b0 : 1'b1;
+  logic error_led_o;
   assign error_led_o = fpga_host_error_lo;
 
   // I/O command buses
