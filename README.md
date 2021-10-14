@@ -25,10 +25,12 @@ Other areas for improvement:
 ## Repo structure
 
 - `common/`: Board definition files and template constraints files for the Arty A7-100T.
-- `proj/`: tcl script and accompanying IP configurations for generating a Vivado project.
 - `py/`: Python scripts for interacting with a board over the USB serial interface.
 - `src/`: RTL for the arty-parrot-specific host components in the design.
-- `test/`: Some sample NBF files.
+- `xdc/`: constraints files
+- `nbf/`: NBF creation and sample files
+- `rtl/`: BlackParrot RTL
+- `sdk/`: BlackParrot SDK
 
 ## Usage
 
@@ -109,6 +111,20 @@ connected should allow you to program it from the editor.
 **IMPORTANT: You must _remove_ the "JP2" jumper for this project to work in its default
 configuration.** The JP2 jumper, when connected, will trigger erroneous resets in response to USB
 serial activity.
+
+### Manual invocation of project creation script
+
+If you would like to generate the project without the Makefile (e.g., on Windows), do the
+following:
+* If necessary for your host OS, source Vivado settings64.sh from the command prompt (settings64.bat on Windows)
+* Run `vivado -mode batch -source generate_project.tcl -tclargs --blackparrot_dir <path> --arty_dir <path>`
+    * The `--blackparrot_dir` argument is the base folder for BlackParrot repo without the trailing
+      slash. This repo includes the black-parrot repo as a submodule under the folder name `rtl`;
+      you should provide the path to that directory.
+    * The `--arty_dir` argument is the base folder of this repository without the trailing slash.
+
+On Windows machines, you may need to use single `/` characters (forward slashes) in the path, and
+use absolute paths.
 
 ### Deploying and running programs
 

@@ -35,56 +35,62 @@ module bp_fpga_host
     , parameter io_in_nbf_buffer_els_p = 4
     , parameter io_out_nbf_buffer_els_p = 4
 
-    `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, io)
+    `declare_bp_bedrock_mem_if_widths(paddr_width_p, dword_width_gp, lce_id_width_p, lce_assoc_p, io)
     )
-  (input                                     clk_i
-   , input                                   reset_i
+  (input                                            clk_i
+   , input                                          reset_i
 
    // From BlackParrot
-   , input [io_mem_msg_width_lp-1:0]         io_cmd_i
-   , input                                   io_cmd_v_i
-   , output logic                            io_cmd_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_cmd_header_i
+   , input [dword_width_gp-1:0]                     io_cmd_data_i
+   , input                                          io_cmd_v_i
+   , output logic                                   io_cmd_ready_and_o
+   , input                                          io_cmd_last_i
 
-   , output logic [io_mem_msg_width_lp-1:0]  io_resp_o
-   , output logic                            io_resp_v_o
-   , input                                   io_resp_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_resp_header_o
+   , output logic [dword_width_gp-1:0]              io_resp_data_o
+   , output logic                                   io_resp_v_o
+   , input                                          io_resp_yumi_i
+   , output logic                                   io_resp_last_o
 
    // To BlackParrot
-   , output logic [io_mem_msg_width_lp-1:0]  io_cmd_o
-   , output logic                            io_cmd_v_o
-   , input                                   io_cmd_yumi_i
+   , output logic [io_mem_msg_header_width_lp-1:0]  io_cmd_header_o
+   , output logic [dword_width_gp-1:0]              io_cmd_data_o
+   , output logic                                   io_cmd_v_o
+   , input                                          io_cmd_yumi_i
+   , output logic                                   io_cmd_last_o
 
-   , input  [io_mem_msg_width_lp-1:0]        io_resp_i
-   , input                                   io_resp_v_i
-   , output logic                            io_resp_ready_and_o
+   , input [io_mem_msg_header_width_lp-1:0]         io_resp_header_i
+   , input [dword_width_gp-1:0]                     io_resp_data_i
+   , input                                          io_resp_v_i
+   , output logic                                   io_resp_ready_and_o
+   , input                                          io_resp_last_i
 
    // UART from/to PC Host
-   , input                                   rx_i
-   , output logic                            tx_o
+   , input                                          rx_i
+   , output logic                                   tx_o
 
    // Error bit - typically map to FPGA LED
-   , output logic                            error_o
+   , output logic                                   error_o
 
    );
 
-  initial begin
-    assert(nbf_addr_width_p % 8 == 0)
-      else $error("NBF address width must be a multiple of 8-bits");
-    assert(nbf_addr_width_p == 40)
-      else $error("NBF address width must be 40-bits");
-    assert(nbf_data_width_p == 64)
-      else $error("NBF data width must be 64-bits");
-    assert(uart_data_bits_p == 8)
-      else $error("UART must use 8 data bits");
-    assert(uart_parity_bit_p == 0 || uart_parity_bit_p == 1)
-      else $error("UART parity_bit_p must be 0 (none) or 1");
-    assert(uart_parity_odd_p == 0 || uart_parity_odd_p == 1)
-      else $error("UART parity_odd_p must be 0 (even) or 1 (odd)");
-    assert(uart_stop_bits_p == 1 || uart_stop_bits_p == 2)
-      else $error("Invalid UART stop bits setting. Must be 1 or 2.");
-    assert(nbf_width_lp % uart_data_bits_p == 0)
-      else $error("uart data bits must be even divisor of NBF packet width");
-  end
+  if(!(nbf_addr_width_p % 8 == 0))
+    $fatal(0,"NBF address width must be a multiple of 8-bits");
+  if(!(nbf_addr_width_p == 40))
+    $fatal(0,"NBF address width must be 40-bits");
+  if(!(nbf_data_width_p == 64))
+    $fatal(0,"NBF data width must be 64-bits");
+  if(!(uart_data_bits_p == 8))
+    $fatal(0,"UART must use 8 data bits");
+  if(!(uart_parity_bit_p == 0 || uart_parity_bit_p == 1))
+    $fatal(0,"UART parity_bit_p must be 0 (none) or 1");
+  if(!(uart_parity_odd_p == 0 || uart_parity_odd_p == 1))
+    $fatal(0,"UART parity_odd_p must be 0 (even) or 1 (odd)");
+  if(!(uart_stop_bits_p == 1 || uart_stop_bits_p == 2))
+    $fatal(0,"Invalid UART stop bits setting. Must be 1 or 2.");
+  if(!(nbf_width_lp % uart_data_bits_p == 0))
+    $fatal(0,"uart data bits must be even divisor of NBF packet width");
 
   `declare_bp_fpga_host_nbf_s(nbf_addr_width_p, nbf_data_width_p);
 
@@ -105,12 +111,16 @@ module bp_fpga_host
     host_io_in
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.io_cmd_o(io_cmd_o)
+     ,.io_cmd_header_o(io_cmd_header_o)
+     ,.io_cmd_data_o(io_cmd_data_o)
      ,.io_cmd_v_o(io_cmd_v_o)
      ,.io_cmd_yumi_i(io_cmd_yumi_i)
-     ,.io_resp_i(io_resp_i)
+     ,.io_cmd_last_o(io_cmd_last_o)
+     ,.io_resp_header_i(io_resp_header_i)
+     ,.io_resp_data_i(io_resp_data_i)
      ,.io_resp_v_i(io_resp_v_i)
      ,.io_resp_ready_and_o(io_resp_ready_and_o)
+     ,.io_resp_last_i(io_resp_last_i)
      ,.rx_i(rx_i)
      ,.nbf_o(nbf_lo)
      ,.nbf_v_o(nbf_v_lo)
@@ -132,12 +142,16 @@ module bp_fpga_host
     host_io_out
     (.clk_i(clk_i)
      ,.reset_i(reset_i)
-     ,.io_cmd_i(io_cmd_i)
+     ,.io_cmd_header_i(io_cmd_header_i)
+     ,.io_cmd_data_i(io_cmd_data_i)
      ,.io_cmd_v_i(io_cmd_v_i)
      ,.io_cmd_ready_and_o(io_cmd_ready_and_o)
-     ,.io_resp_o(io_resp_o)
+     ,.io_cmd_last_i(io_cmd_last_i)
+     ,.io_resp_header_o(io_resp_header_o)
+     ,.io_resp_data_o(io_resp_data_o)
      ,.io_resp_v_o(io_resp_v_o)
      ,.io_resp_yumi_i(io_resp_yumi_i)
+     ,.io_resp_last_o(io_resp_last_o)
      ,.tx_o(tx_o)
      ,.nbf_i(nbf_lo)
      ,.nbf_v_i(nbf_v_lo)

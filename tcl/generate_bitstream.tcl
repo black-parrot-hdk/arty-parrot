@@ -1,5 +1,6 @@
 set script_jobs 8
 set script_file "generate_bitstream.tcl"
+set project_xpr "project.xpr"
 
 # Help information for this script
 proc print_help {} {
@@ -9,6 +10,7 @@ proc print_help {} {
   puts "Syntax:"
   puts "$script_file"
   puts "$script_file -tclargs \[--jobs <N>\]"
+  puts "$script_file -tclargs \[--project\]"
   puts "$script_file -tclargs \[--help\]\n"
   puts "Usage:"
   puts "Name                   Description"
@@ -24,6 +26,7 @@ if { $::argc > 0 } {
     set option [string trim [lindex $::argv $i]]
     switch -regexp -- $option {
       "--jobs"   { incr i; set script_jobs [lindex $::argv $i] }
+      "--project" { incr i; set project_xpr [lindex $::argv $i] }
       "--help"         { print_help }
       default {
         if { [regexp {^-} $option] } {
@@ -36,7 +39,7 @@ if { $::argc > 0 } {
 }
 
 # open project
-open_project arty-parrot/arty-parrot.xpr
+open_project $project_xpr
 
 # run implementation
 reset_run synth_1

@@ -8,7 +8,7 @@ module mig_ddr3_ram
     #(parameter bp_params_e bp_params_p = e_bp_default_cfg
      `declare_bp_proc_params(bp_params_p)
      `declare_bp_bedrock_mem_if_widths(paddr_width_p, cce_block_width_p, lce_id_width_p, lce_assoc_p, cce)
-      ,localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(caddr_width_p)
+      ,localparam dma_pkt_width_lp = `bsg_cache_dma_pkt_width(daddr_width_p)
       )
     // 100MHz primary clock, used only for RAM
     (input logic sys_clk_i
@@ -362,15 +362,13 @@ module mig_ddr3_ram
          ,.s_axi_rready                   (axi_rready_core_clk_li)
         );
 
+  // TODO: fix params - should addr_width_p be daddr_width_p? What is the difference?
     bsg_cache_to_axi
-        #(.addr_width_p          (caddr_width_p)
+        #(.addr_width_p          (daddr_width_p)
           ,.block_size_in_words_p(cce_block_width_p/dword_width_gp)
           ,.data_width_p         (dword_width_gp)
-          ,.num_cache_p          (1)
-          ,.tag_fifo_els_p       (1)
-
+          ,.num_cache_p          (num_cce_p) // 1 - multicore not yet supported
           ,.axi_id_width_p       (axi_id_width_p)
-          ,.axi_addr_width_p     (axi_addr_width_p)
           ,.axi_data_width_p     (axi_data_width_p)
           ,.axi_burst_len_p      (axi_burst_len_p)
           )
@@ -391,7 +389,8 @@ module mig_ddr3_ram
          ,.dma_data_yumi_o (dma_data_yumi_o)
 
          ,.axi_awid_o      (axi_awid_core_clk_li)
-         ,.axi_awaddr_o    (axi_awaddr_core_clk_li)
+         ,.axi_awaddr_addr_o    (axi_awaddr_core_clk_li)
+         ,.axi_awaddr_cache_id_o(/*unused*/)
          ,.axi_awlen_o     (axi_awlen_core_clk_li)
          ,.axi_awsize_o    (axi_awsize_core_clk_li)
          ,.axi_awburst_o   (axi_awburst_core_clk_li)
@@ -413,7 +412,8 @@ module mig_ddr3_ram
          ,.axi_bready_o    (axi_bready_core_clk_li)
 
          ,.axi_arid_o      (axi_arid_core_clk_li)
-         ,.axi_araddr_o    (axi_araddr_core_clk_li)
+         ,.axi_araddr_addr_o    (axi_araddr_core_clk_li)
+         ,.axi_araddr_cache_id_o(/*unused*/)
          ,.axi_arlen_o     (axi_arlen_core_clk_li)
          ,.axi_arsize_o    (axi_arsize_core_clk_li)
          ,.axi_arburst_o   (axi_arburst_core_clk_li)
