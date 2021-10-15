@@ -84,13 +84,13 @@ module arty_parrot
   bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_li, fpga_host_io_resp_lo;
   logic [dword_width_gp-1:0] fpga_host_io_cmd_data_li, fpga_host_io_resp_data_lo;
   logic fpga_host_io_cmd_v_li, fpga_host_io_cmd_ready_and_lo;
-  logic fpga_host_io_resp_v_lo, fpga_host_io_resp_yumi_li;
+  logic fpga_host_io_resp_v_lo, fpga_host_io_resp_ready_and_li;
   logic fpga_host_io_cmd_last_li, fpga_host_io_resp_last_lo;
 
   // from FPGA Host
   bp_bedrock_io_mem_msg_header_s fpga_host_io_cmd_lo, fpga_host_io_resp_li;
   logic [dword_width_gp-1:0] fpga_host_io_cmd_data_lo, fpga_host_io_resp_data_li;
-  logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_yumi_li;
+  logic fpga_host_io_cmd_v_lo, fpga_host_io_cmd_ready_and_li;
   logic fpga_host_io_resp_v_li, fpga_host_io_resp_ready_and_lo;
   logic fpga_host_io_cmd_last_lo, fpga_host_io_resp_last_li;
 
@@ -331,14 +331,14 @@ module arty_parrot
        ,.io_resp_header_o    (fpga_host_io_resp_lo)
        ,.io_resp_data_o      (fpga_host_io_resp_data_lo)
        ,.io_resp_v_o         (fpga_host_io_resp_v_lo)
-       ,.io_resp_yumi_i      (fpga_host_io_resp_yumi_li)
+       ,.io_resp_yumi_i      (fpga_host_io_resp_v_lo & fpga_host_io_resp_ready_and_li)
        ,.io_resp_last_o      (fpga_host_io_resp_last_lo)
 
        // from FPGA Host
        ,.io_cmd_header_o     (fpga_host_io_cmd_lo)
        ,.io_cmd_data_o       (fpga_host_io_cmd_data_lo)
        ,.io_cmd_v_o          (fpga_host_io_cmd_v_lo)
-       ,.io_cmd_yumi_i       (fpga_host_io_cmd_yumi_li)
+       ,.io_cmd_yumi_i       (fpga_host_io_cmd_v_lo & fpga_host_io_cmd_ready_and_li)
        ,.io_cmd_last_o       (fpga_host_io_cmd_last_lo)
 
        ,.io_resp_header_i    (fpga_host_io_resp_li)
@@ -372,14 +372,14 @@ module arty_parrot
      ,.io_resp_header_i     (fpga_host_io_resp_lo)
      ,.io_resp_data_i       (fpga_host_io_resp_data_lo)
      ,.io_resp_v_i          (fpga_host_io_resp_v_lo)
-     ,.io_resp_yumi_o       (fpga_host_io_resp_yumi_li)
+     ,.io_resp_ready_and_o  (fpga_host_io_resp_ready_and_li)
      ,.io_resp_last_i       (fpga_host_io_resp_last_lo)
 
      // I/O from FPGA host
      ,.io_cmd_header_i      (fpga_host_io_cmd_lo)
      ,.io_cmd_data_i        (fpga_host_io_cmd_data_lo)
      ,.io_cmd_v_i           (fpga_host_io_cmd_v_lo)
-     ,.io_cmd_yumi_o        (fpga_host_io_cmd_yumi_li)
+     ,.io_cmd_ready_and_o   (fpga_host_io_cmd_ready_and_li)
      ,.io_cmd_last_i        (fpga_host_io_cmd_last_lo)
 
      ,.io_resp_header_o     (fpga_host_io_resp_li)
