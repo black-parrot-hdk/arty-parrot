@@ -260,7 +260,7 @@ proc create_root_design { parentCell } {
    CONFIG.AWUSER_WIDTH {0} \
    CONFIG.BUSER_WIDTH {0} \
    CONFIG.DATA_WIDTH {64} \
-   CONFIG.FREQ_HZ {37000000} \
+   CONFIG.FREQ_HZ {18000000} \
    CONFIG.HAS_BRESP {1} \
    CONFIG.HAS_BURST {1} \
    CONFIG.HAS_CACHE {1} \
@@ -293,11 +293,11 @@ proc create_root_design { parentCell } {
  ] $clk_111M_o
   set clk_18M_o [ create_bd_port -dir O -type clk clk_18M_o ]
   set_property -dict [ list \
+   CONFIG.ASSOCIATED_BUSIF {s_axi} \
    CONFIG.FREQ_HZ {18000000} \
  ] $clk_18M_o
   set clk_37M_o [ create_bd_port -dir O -type clk clk_37M_o ]
   set_property -dict [ list \
-   CONFIG.ASSOCIATED_BUSIF {s_axi} \
    CONFIG.FREQ_HZ {37000000} \
  ] $clk_37M_o
   set clk_74M_o [ create_bd_port -dir O -type clk clk_74M_o ]
@@ -406,8 +406,8 @@ proc create_root_design { parentCell } {
   connect_bd_net -net mig_ddr_mmcm_locked [get_bd_pins mig_ddr/mmcm_locked] [get_bd_pins rst_mig_ddr_83M/dcm_locked] [get_bd_pins rst_s_axi/dcm_locked]
   connect_bd_net -net mig_ddr_ui_addn_clk_0 [get_bd_ports clk_111M_o] [get_bd_pins mig_ddr/ui_addn_clk_0]
   connect_bd_net -net mig_ddr_ui_addn_clk_1 [get_bd_ports clk_74M_o] [get_bd_pins mig_ddr/ui_addn_clk_1]
-  connect_bd_net -net mig_ddr_ui_addn_clk_2 [get_bd_ports clk_37M_o] [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins mig_ddr/ui_addn_clk_2] [get_bd_pins rst_s_axi/slowest_sync_clk]
-  connect_bd_net -net mig_ddr_ui_addn_clk_3 [get_bd_ports clk_18M_o] [get_bd_pins mig_ddr/ui_addn_clk_3]
+  connect_bd_net -net mig_ddr_ui_addn_clk_2 [get_bd_ports clk_37M_o] [get_bd_pins mig_ddr/ui_addn_clk_2]
+  connect_bd_net -net mig_ddr_ui_addn_clk_3 [get_bd_ports clk_18M_o] [get_bd_pins mig_ddr/ui_addn_clk_3] [get_bd_pins rst_s_axi/slowest_sync_clk] [get_bd_pins axi_clock_converter_0/s_axi_aclk]
   connect_bd_net -net reset_1 [get_bd_ports external_reset_n_i] [get_bd_pins ddr_clocks/resetn] [get_bd_pins mig_ddr/sys_rst] [get_bd_pins rst_s_axi/ext_reset_in]
   connect_bd_net -net rst_mig_ddr_83M_interconnect_aresetn [get_bd_pins axi_clock_converter_0/m_axi_aresetn] [get_bd_pins rst_mig_ddr_83M/interconnect_aresetn]
   connect_bd_net -net rst_mig_ddr_83M_peripheral_aresetn [get_bd_pins mig_ddr/aresetn] [get_bd_pins rst_mig_ddr_83M/peripheral_aresetn]

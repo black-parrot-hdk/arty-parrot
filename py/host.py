@@ -238,7 +238,7 @@ def _listen_command(app: HostApp, args):
 if __name__ == "__main__":
     root_parser = argparse.ArgumentParser()
     root_parser.add_argument('-p', '--port', dest='port', type=str, default='/dev/ttyS4', help='Serial port (full path or name)')
-    root_parser.add_argument('-b', '--baud', dest='baud_rate', type=int, default=2_000_000, help='Serial port baud rate')
+    root_parser.add_argument('-b', '--baud', dest='baud_rate', type=int, default=500000, help='Serial port baud rate')
 
     command_parsers = root_parser.add_subparsers(dest="command")
     command_parsers.required = True
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     load_parser.add_argument('file', help="NBF-formatted file to load")
     load_parser.add_argument('--no-unfreeze', action='store_true', dest='no_unfreeze', help='Suppress any "unfreeze" commands in the input file')
     load_parser.add_argument('--listen', action='store_true', dest='listen', help='Continue listening for incoming messages until program is aborted')
-    load_parser.add_argument('--window-size', type=int, default=500, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking')
+    load_parser.add_argument('--window-size', type=int, default=256, dest='window_size', help='Specifies the maximum number of outstanding replies to allow before blocking')
     load_parser.add_argument('--verbose', action='store_true', dest='verbose', help='Log all send and received commands, even if valid')
     # TODO: add --verify which automatically implies --no-unfreeze then manually unfreezes after
     # TODO: add --verbose which prints all sent and received commands
